@@ -30,10 +30,31 @@ React SDK：
 | --- | --- |
 | Browser / vanilla TS + viem | `@zama-fhe/sdk viem` |
 | Browser / vanilla TS + ethers | `@zama-fhe/sdk ethers` |
-| React / wagmi | `@zama-fhe/react-sdk @tanstack/react-query viem wagmi` |
+| React / wagmi | `@zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query viem wagmi` |
+| React / Vite / TypeScript | 上一行再加 `react react-dom @vitejs/plugin-react vite typescript @types/react @types/react-dom` |
 | Node backend | `@zama-fhe/sdk viem` 或 `@zama-fhe/sdk ethers` |
 
-不要盲目升级 SDK 包。先读项目 lockfile，再确认 Node、bundler 和 wallet library 是否兼容。
+不要盲目升级 SDK 包，也不要写不存在的旧版本。新建项目先查真实发布版本：
+
+```bash
+pnpm view @zama-fhe/sdk version
+pnpm view @zama-fhe/react-sdk version
+pnpm view wagmi version
+pnpm view viem version
+```
+
+然后安装同一代的 `@zama-fhe/sdk` 和 `@zama-fhe/react-sdk`。如果项目已有 lockfile，优先保留当前主版本，再看已安装类型文件确认 API。
+
+已验证的本地 React/wagmi demo 起点：
+
+| 包 | 版本策略 |
+| --- | --- |
+| `@zama-fhe/sdk` / `@zama-fhe/react-sdk` | 同一发布版本，例如 `3.0.0` |
+| `wagmi` | 使用当前稳定 v2 时要验证 `@zama-fhe/react-sdk/wagmi` 是否能 bundle |
+| `viem` | 使用 wagmi 要求的兼容版本 |
+| `@types/react` / `@types/react-dom` | TypeScript React 项目必须显式安装 |
+
+如果 `@zama-fhe/react-sdk/wagmi` 在构建时报类似 `"watchConnection" is not exported by "wagmi/actions"`，不要 patch `node_modules`；改用 custom `GenericSigner` fallback。
 
 ## 网络预设
 
@@ -182,6 +203,10 @@ UI 中要显式展示 chain selection。不要跨链静默复用 handles、crede
 | 自定义 `GenericSigner` | 项目代码 | smart wallet 或自定义 transport |
 
 Signer 需要提供 chain id、account address、typed-data signatures、contract reads/writes、transaction receipt waiting、block timestamp reads。如果 signer 能发出 account/chain 变化事件，实现 `subscribe`，让 SDK 状态可以安全重置。
+
+### Wagmi adapter fallback
+
+`WagmiSigner` 是首选，但它依赖 SDK 和 wagmi 的内部 action export 兼容。遇到 bundle-time export mismatch 时，用项目本地 signer 实现 `GenericSigner`：
 
 ## Storage 选择
 

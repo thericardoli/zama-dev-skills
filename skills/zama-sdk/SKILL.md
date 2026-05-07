@@ -48,8 +48,9 @@ description: 使用新版 Zama SDK 构建 FHEVM dApp、脚本、后端或 React 
 1. 先读目标项目的 `package.json`、lockfile、Node 版本、framework 和 wallet stack。
 2. 按上面的索引选择最相关的 reference，不需要从头读完整套文档。
 3. 按环境选 runtime：browser/React 用 `RelayerWeb`，Node 后端/脚本用 `RelayerNode`，本地 cleartext 用 `RelayerCleartext`。
-4. 按 wallet stack 选 signer：wagmi 用 `WagmiSigner`，viem 用 `ViemSigner`，ethers 用 `EthersSigner`。
-5. 按数据生命周期选 storage：browser 用 `indexedDBStorage`，测试/一次性脚本用 `memoryStorage`，Node 多请求隔离用 `asyncLocalStorage`。
-6. 先搭 SDK/Provider，再实现业务流程；不要在同一步里混合网络配置、钱包状态、合约 ABI 和 UI state。
-7. token 任务按 shield、balance、transfer、operator approval、unshield、activity feed 拆；自定义合约任务走 encrypt/decrypt 文档。
-8. 最后检查 contract address、user address、chain id、handle、input proof、ACL、API key 暴露、session TTL、browser security headers 和 SSR 边界。
+4. 新项目先查询 pnpm registry 上真实可用的 `@zama-fhe/sdk` / `@zama-fhe/react-sdk` 版本，不要照写陈旧版本号。
+5. 按 wallet stack 选 signer：wagmi 优先尝试 `WagmiSigner`；如果当前 SDK/wagmi 组合构建失败，立即改用本 skill 的 custom `GenericSigner` fallback；viem 用 `ViemSigner`，ethers 用 `EthersSigner`。
+6. 按数据生命周期选 storage：browser 用 `indexedDBStorage`，测试/一次性脚本用 `memoryStorage`，Node 多请求隔离用 `asyncLocalStorage`。
+7. 先搭 SDK/Provider，再实现业务流程；不要在同一步里混合网络配置、钱包状态、合约 ABI 和 UI state。
+8. token 任务按 shield、balance、transfer、operator approval、unshield、activity feed 拆；自定义合约任务走 encrypt/decrypt 文档。
+9. 最后检查 contract address、user address、chain id、handle、input proof、ACL、API key 暴露、session TTL、browser security headers 和 SSR 边界。

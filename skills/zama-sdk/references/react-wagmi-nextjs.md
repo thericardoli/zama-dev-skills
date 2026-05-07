@@ -56,6 +56,32 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
+对 Vite + React + TypeScript，不要漏掉 React 类型包和 Vite React 插件。一个可用的最小依赖组：
+
+```json
+{
+  "dependencies": {
+    "@rainbow-me/rainbowkit": "^2.2.9",
+    "@tanstack/react-query": "^5.90.7",
+    "@zama-fhe/react-sdk": "^3.0.0",
+    "@zama-fhe/sdk": "^3.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "viem": "^2.38.5",
+    "wagmi": "^2.18.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.2.0"
+  }
+}
+```
+
+版本号是启动点，不是永久真理。新项目要先用 `pnpm view` 查询当前真实版本；如果升级到新的 wagmi/viem 组合，必须跑一次 production build，因为 adapter 兼容问题常在 bundle 阶段暴露。
+
 ## Provider 参数
 
 | Prop | 含义 |

@@ -89,7 +89,7 @@ src/
 React / wagmi：
 
 ```bash
-pnpm add @zama-fhe/react-sdk @tanstack/react-query wagmi viem
+pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
 ```
 
 使用 viem 的 vanilla TypeScript 或 Node.js：
@@ -105,6 +105,15 @@ pnpm add @zama-fhe/sdk ethers
 ```
 
 在 Node 中运行 SDK 代码的项目使用 Node.js `>=22`。
+
+新项目不要照抄过期版本号。先查询真实发布版本，并让 `@zama-fhe/sdk` 与 `@zama-fhe/react-sdk` 使用同一发布版本：
+
+```bash
+pnpm view @zama-fhe/sdk version
+pnpm view @zama-fhe/react-sdk version
+```
+
+React + TypeScript 项目还要安装框架类型包，例如 `@types/react`、`@types/react-dom`。wagmi 项目优先用 `@zama-fhe/react-sdk/wagmi` 的 `WagmiSigner`；如果当前 SDK/wagmi 组合构建失败，改用 `configuration.md` 里的 custom `GenericSigner` fallback。
 
 ## 认证规则
 

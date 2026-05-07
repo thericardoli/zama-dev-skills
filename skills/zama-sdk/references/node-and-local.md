@@ -120,6 +120,19 @@ const relayer = new RelayerCleartext(hardhatCleartextConfig);
 const sdk = new ZamaSDK({ relayer, signer, storage: memoryStorage });
 ```
 
+本地 Anvil/Hardhat 需要先部署 forge-fhevm cleartext host stack，否则 SDK 加密出来的 proof/handle 与链上 executor/ACL 不匹配。典型顺序：
+
+```bash
+# terminal 1
+anvil --host 127.0.0.1 --port 8545 --chain-id 31337
+
+# terminal 2
+LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545
+forge script script/DeployLocal.s.sol:DeployLocal --rpc-url http://127.0.0.1:8545 --broadcast --unlocked --sender 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
+```
+
+前端的 `contractAddress` 必须来自同一次 Anvil 会话的本地部署输出；Anvil 重启后要重新部署并更新地址文件。
+
 Cleartext 模式适合：
 
 - 本地合约 demo
@@ -137,7 +150,7 @@ import { RelayerCleartext, hoodiCleartextConfig } from "@zama-fhe/sdk/cleartext"
 const relayer = new RelayerCleartext(hoodiCleartextConfig);
 ```
 
-自定义 cleartext chain 需要提供 `CleartextConfig`，其中 `executorAddress` 必须对应本地部署的 cleartext executor。
+自定义 cleartext chain 需要提供 `CleartextConfig`，其中 `executorAddress`、`aclContractAddress`、gateway verification contracts 必须对应本地部署的 cleartext executor。对于 forge-fhevm local stack，优先使用 `hardhatCleartextConfig` 作为基线，只覆盖 `chainId` 和 `network`。
 
 ## Worker 和生命周期管理
 

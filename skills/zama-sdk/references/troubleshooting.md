@@ -19,6 +19,15 @@ cat package.json
 rg "@zama-fhe/(sdk|react-sdk)|RelayerWeb|RelayerNode|RelayerCleartext|ZamaProvider|WagmiSigner|ViemSigner|EthersSigner"
 ```
 
+如果 pnpm 安装时报 `No matching version found for @zama-fhe/react-sdk@...`，说明示例或模型记忆里的版本已经过期。先查询真实版本，再同步两个 SDK 包：
+
+```bash
+pnpm view @zama-fhe/sdk versions --json
+pnpm view @zama-fhe/react-sdk versions --json
+```
+
+如果生产构建时报 `"watchConnection" is not exported by "wagmi/actions"` 或类似 wagmi action export mismatch，问题在 `@zama-fhe/react-sdk/wagmi` adapter 与当前 wagmi 版本不匹配。不要改 `node_modules`；使用 `configuration.md` 里的 custom `GenericSigner` fallback，或固定到已验证的 SDK/wagmi/viem 版本组合。
+
 ## `window is not defined` 或 SSR Crash
 
 可能原因：
@@ -176,6 +185,19 @@ Cleartext 模式只适用于兼容的本地 cleartext deployment。
 - 本地合约部署的 FHE mode 与 cleartext runtime 不匹配
 - app 期待 public decrypt proof behavior，但 cleartext setup 不支持
 - contract addresses 从另一次 local node session 复制过来
+
+快速检查：
+
+```bash
+cast client --rpc-url http://127.0.0.1:8545
+cast chain-id --rpc-url http://127.0.0.1:8545
+```
+
+如果 forge-fhevm `deploy-local.sh` 报 `could not detect a supported local RPC backend`，显式传：
+
+```bash
+LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545
+```
 
 ## 安全检查清单
 
