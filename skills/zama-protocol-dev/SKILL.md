@@ -1,34 +1,47 @@
 ---
 name: zama-protocol-dev
-description: Zama Protocol 开发任务的总入口和 skill 索引。用于在 Zama FHEVM Solidity、Hardhat、Foundry、Zama SDK、React/wagmi/viem 和安全审计等多个 skill 之间选择正确路径，尤其适合跨栈任务或用户没有明确指定框架时。
+description: "Skill routing entry point for Zama Protocol development. Use it to decide which Zama skills to load for a concrete task: use zama-fhevm-solidity-core for contract APIs and Solidity patterns; use zama-hardhat-contract-dev for Hardhat-based contract development, testing, and deployment, usually with core; use zama-foundry-forge-fhevm similarly for Foundry/forge-fhevm; use zama-sdk for TypeScript application code that interacts with Zama contracts; combine SDK with core and either Hardhat or Foundry for a complete dApp; use zama-fhevm-security-review for security review."
 ---
 
 # Zama Protocol Dev
 
-## 简介
+## Purpose
 
-本 skill 是 Zama Protocol 开发的总入口。它不提供具体 API 细节，只负责帮助 agent 判断当前任务应该加载哪些 Zama skill，以及按什么顺序读取。
+This skill only selects the right Zama skill or skill combination. It does not provide concrete APIs, code templates, or deployment commands.
 
-使用原则：
+Use it when the user has not named a specific Zama skill, or when the task spans contracts, testing frameworks, SDK integration, frontend/backend code, or security review.
 
-- 不要一次性加载所有 Zama skill。
-- 先识别任务所在层：Solidity core、Hardhat、Foundry、前端/SDK、安全审计。
-- 单层任务只加载对应 skill。
-- 跨栈任务按 workflow 逐层加载，先合约 core，再框架，再前端或审计。
+## Selection Rules
 
-## Skill 索引
+- Do not load every Zama skill at once.
+- First identify the task layer: contract logic, development framework, application integration, full dApp, or security review.
+- For a single-layer task, load only the corresponding skill.
+- For contract business logic, encrypted types, the `FHE` API, ACL, and decryption design, load `zama-fhevm-solidity-core` first.
+- Hardhat and Foundry skills cover project structure, tests, deployment, and local development tooling. Contract-level patterns still belong in core.
+- The SDK skill covers TypeScript, React, and Node application code that interacts with deployed or soon-to-be-deployed Zama contracts. A complete dApp also needs core plus one contract framework skill.
+- For cross-stack work, load skills in order: core, then Hardhat or Foundry, then SDK. For a complete dApp, read `zama-fullstack-dapp` first to define the overall composition.
 
-- `zama-fhevm-solidity-core`：FHEVM Solidity 合约核心。类型、`FHE` API、encrypted input、ACL、解密、ERC7984 合约模式。
-- `zama-hardhat-contract-dev`：Hardhat 项目开发、测试、部署。`@fhevm/hardhat-plugin`、mock、localhost、Sepolia、TypeScript 测试。
-- `zama-foundry-forge-fhevm`：Foundry/forge-fhevm 项目开发和测试。`FhevmTest`、Forge tests、fuzz、本地 cleartext stack。
-- `zama-sdk`：新版 Zama TypeScript/React SDK。`@zama-fhe/sdk`、`@zama-fhe/react-sdk`、RelayerWeb/Node/Cleartext、ZamaSDK、ZamaProvider、wagmi/viem/ethers、encrypted input、decrypt、ERC7984 token，并替代旧 relayer/react-wagmi skill。
-- `zama-fhevm-security-review`：FHEVM 安全审计。ACL、input proof、public decrypt、replay、reorg、overflow、mock/生产差异。
+## Skill Index
+
+- `zama-fhevm-solidity-core`: Explains FHEVM Solidity APIs and contract-side implementation patterns. Use it for encrypted types, the `FHE` API, encrypted input, ACL, user/public decryption, ERC7984, and contract business logic.
+- `zama-hardhat-contract-dev`: Use when the user plans to develop, test, or deploy Zama contracts with Hardhat. Covers `@fhevm/hardhat-plugin`, Hardhat mock, TypeScript tests, tasks, and localhost/Sepolia/mainnet deployment. Usually used together with `zama-fhevm-solidity-core`.
+- `zama-foundry-forge-fhevm`: Use when the user plans to develop, test, or deploy Zama contracts with Foundry/forge-fhevm. Covers `FhevmTest`, Forge tests, fuzzing, the local cleartext FHEVM stack, and Foundry deployment. Usually used together with `zama-fhevm-solidity-core`.
+- `zama-sdk`: A set of TypeScript libraries for interacting with Zama smart contracts. Use it for browser dApps, React/wagmi/viem/ethers, Node scripts, backend services, relayer runtime, encrypted input, user/public decryption, and ERC7984 token flows. A complete dApp should combine it with `zama-fhevm-solidity-core` and either `zama-hardhat-contract-dev` or `zama-foundry-forge-fhevm`.
+- `zama-fullstack-dapp`: Orchestration skill for complete dApps. Use it to decide how contracts, Hardhat/Foundry, the SDK, React/backend code, ABI/address synchronization, runtime selection, and end-to-end validation fit together. It does not replace the concrete skills above.
+- `zama-fhevm-security-review`: Use for audits or security reviews of Zama contracts and application integrations. Focuses on FHEVM-specific risks such as ACL, input proofs, public decryption, replay, reorgs, overflow, and mock-vs-production differences.
+
+## Common Task Mapping
+
+- Write, modify, or explain a Zama Solidity contract: `zama-fhevm-solidity-core`
+- Look up the `FHE` API, encrypted types, ACL, decryption, or ERC7984 contract patterns: `zama-fhevm-solidity-core`
+- Write Hardhat tests, mocks, tasks, deployment scripts, or fix Hardhat configuration: `zama-fhevm-solidity-core` + `zama-hardhat-contract-dev`
+- Write Foundry/forge-fhevm tests, fuzz tests, local cleartext stack logic, or deployment scripts: `zama-fhevm-solidity-core` + `zama-foundry-forge-fhevm`
+- Write a React page, Node script, or backend service that calls a Zama contract: `zama-fhevm-solidity-core` + `zama-sdk`
+- Build a complete dApp with contracts, frontend, SDK integration, deployment artifacts, and e2e validation: `zama-fullstack-dapp` + `zama-fhevm-solidity-core` + one framework skill + `zama-sdk`
+- Audit, review, or investigate FHEVM security risks: `zama-fhevm-security-review`, plus core, framework, or SDK skills as needed
+- If the user did not choose Hardhat or Foundry: inspect the repository structure first. If the framework still cannot be inferred, start with `zama-fhevm-solidity-core` and choose a framework skill only when needed.
 
 ## References
 
-- [references/skill-map.md](references/skill-map.md)：每个 Zama skill 的职责、边界和选择规则。
-- [references/workflow-map.md](references/workflow-map.md)：常见任务的 skill 读取顺序。
-
-## 默认判断
-
-如果用户只说“Zama 合约”或“fhevm 合约”，先用 `zama-fhevm-solidity-core`。如果用户明确提到 Hardhat、Foundry、React、SDK、relayer、审计，则加载对应 skill。跨栈任务只加载完成当前步骤所需的最小集合。
+- [references/skill-map.md](references/skill-map.md): Responsibilities and selection rules for each Zama skill.
+- [references/workflow-map.md](references/workflow-map.md): Recommended skill loading order for common workflows.

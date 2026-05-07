@@ -1,138 +1,111 @@
 # Zama Workflow Map
 
-## 新建或修改 Solidity 合约
+## Create or Modify a Solidity Contract
 
-读取顺序：
+Load order:
 
 1. `zama-fhevm-solidity-core`
-2. 只按需要读取 core references：
-   - 类型和 API：`references/api.md`
-   - 输入：`references/patterns/encryption.md`
-   - 运算：`references/patterns/operations.md`
-   - 条件分支：`references/patterns/branching.md`
-   - ACL：`references/patterns/acl.md`
-   - 解密：`references/patterns/decryption.md`
+2. Read only the core references needed for the task:
+   - Types and APIs: `references/api.md`
+   - Input handling: `references/patterns/encryption.md`
+   - Operations: `references/patterns/operations.md`
+   - Conditional logic: `references/patterns/branching.md`
+   - ACL: `references/patterns/acl.md`
+   - Decryption: `references/patterns/decryption.md`
 
-不要加载 Hardhat/Foundry，除非用户要求测试或仓库结构已经明确。
+Do not load Hardhat or Foundry unless the user asks for tests/deployment or the repository structure already identifies the framework.
 
-## Hardhat 合约开发
+## Hardhat Development
 
-读取顺序：
+Load order:
 
 1. `zama-fhevm-solidity-core`
 2. `zama-hardhat-contract-dev`
 
-常见任务：
+Common tasks:
 
-- 写合约：先 core
-- 写 TypeScript 测试：再 hardhat testing
-- 部署：hardhat deploy references
-- task：hardhat deploy-and-tasks references
+- Write contracts: start with core.
+- Write TypeScript tests: then use Hardhat testing references.
+- Deploy: use Hardhat deployment references.
+- Write tasks: use Hardhat task references.
 
-## Foundry 合约开发
+## Foundry Development
 
-读取顺序：
+Load order:
 
 1. `zama-fhevm-solidity-core`
 2. `zama-foundry-forge-fhevm`
 
-常见任务：
+Common tasks:
 
-- 写合约：先 core
-- 写 Forge test：foundry testing
-- fuzz：foundry testing
-- 本地 cleartext host contracts：foundry deploy
+- Write contracts: start with core.
+- Write Forge tests: use Foundry testing references.
+- Fuzzing: use Foundry testing references.
+- Local cleartext host contracts: use Foundry deployment references.
 
-## React dApp
+## Complete dApp or React dApp
 
-读取顺序：
+Load order:
 
-1. `zama-fhevm-solidity-core`，理解合约 ABI、handle、ACL、decrypt 设计
-2. `zama-sdk`
-3. 在 `zama-sdk` 内按需选择 React hooks、provider、custom contract 或 token references
+1. `zama-fullstack-dapp` to define repository organization, runtime choice, contract/SDK/relayer/frontend boundaries, and validation criteria.
+2. `zama-fhevm-solidity-core` to understand the contract ABI, handles, ACL, and decryption design.
+3. Load `zama-foundry-forge-fhevm` or `zama-hardhat-contract-dev` according to the repository or the user's requested framework.
+4. `zama-sdk`
+5. Inside `zama-sdk`, select only the relevant React hooks, provider, custom-contract, Node/local, or token references.
 
-常见任务：
+Common tasks:
 
-- 读 encrypted handle：React hook
-- 写 encrypted input：React hook 或 `@zama-fhe/sdk`
-- user decrypt：React hook
-- 本地/Sepolia 切换：Zama provider/runtime config
+- Complete local SDK dApp: prefer the Foundry/forge-fhevm local cleartext path.
+- Hardhat contract + React SDK: explicitly account for the difference between Hardhat mock flows and SDK runtime flows. Use a testnet or a verified SDK-compatible local stack when needed.
+- Read encrypted handles: React hooks.
+- Submit encrypted input: React hooks or `@zama-fhe/sdk`.
+- User decryption: React hooks.
+- Local/Sepolia switching: Zama provider/runtime configuration.
 
-## 脚本或 CLI
+## Scripts or CLI Tools
 
-读取顺序：
+Load order:
 
 1. `zama-fhevm-solidity-core`
 2. `zama-sdk`
 
-常见任务：
+Common tasks:
 
-- Node 脚本加密输入
-- viem/ethers 发送交易
-- public decrypt 或 user decrypt
-- 自定义 relayer/network config
+- Encrypt input from a Node script.
+- Send transactions with viem or ethers.
+- Perform public decryption or user decryption.
+- Configure a custom relayer or network.
 
 ## ERC7984 token
 
-读取顺序：
+Load order:
 
 1. `zama-fhevm-solidity-core`
 2. core `references/patterns/erc7984.md`
-3. 根据框架选择 Hardhat 或 Foundry
-4. 如有前端，再读 `zama-sdk`
+3. Select Hardhat or Foundry according to the framework.
+4. If there is a frontend, also read `zama-sdk`.
 
-组合场景：
+Combinations:
 
-- token 合约：core ERC7984
-- token 测试：hardhat/foundry
-- token UI：`zama-sdk`
-- wrapper/vesting/auction：core ERC7984 + ACL + branching/decryption
+- Token contract: core ERC7984.
+- Token tests: Hardhat or Foundry.
+- Token UI: `zama-sdk`.
+- Wrapper, vesting, or auction flows: core ERC7984 + ACL + branching/decryption.
 
-## Sealed-bid auction 或复杂应用
+## Security Review
 
-读取顺序：
-
-1. core encryption
-2. core operations
-3. core branching
-4. core ACL
-5. core decryption
-6. 如使用 ERC7984 收款，读 core ERC7984
-7. 根据测试/前端需求加载框架 skill
-
-典型结构：
-
-- 用户提交 encrypted bid
-- 合约用 `FHE.select` 更新 highest bid 和 encrypted winner
-- 结束后 public decrypt winner
-- finalize 验证 KMS proof 后写入公开 winner
-- 普通 Solidity 逻辑处理 claim/withdraw
-
-## 安全审计
-
-读取顺序：
+Load order:
 
 1. `zama-fhevm-security-review`
-2. 如需确认合约 API 或模式，再读 `zama-fhevm-solidity-core`
-3. 如风险来自测试或部署，再读 Hardhat/Foundry
-4. 如风险来自 UI 或 SDK runtime，再读 `zama-sdk`
+2. If contract APIs or patterns need confirmation, also read `zama-fhevm-solidity-core`.
+3. If the risk comes from testing or deployment, also read the Hardhat or Foundry skill.
+4. If the risk comes from UI code or SDK runtime integration, also read `zama-sdk`.
 
-审计重点：
+Review focus:
 
-- 是否验证 encrypted input
-- ACL 是否正确传播
-- public decrypt 是否必要且防 replay
-- encrypted condition 是否 fail-open
-- 是否有 reorg 风险
-- 测试是否只覆盖 mock happy path
-
-## Debugging
-
-读取顺序由报错位置决定：
-
-- Solidity compile/API 错误：core api
-- input proof/sender mismatch：core encryption + framework testing
-- user decrypt failure：core ACL/decryption + framework/frontend skill
-- public decrypt proof failure：core decryption + `zama-sdk`
-- deploy/network 错误：Hardhat/Foundry deploy
-- UI runtime 错误：`zama-sdk`
+- Whether encrypted input is verified.
+- Whether ACL is propagated correctly.
+- Whether public decryption is necessary and replay-protected.
+- Whether encrypted conditions can fail open.
+- Whether there is reorg risk.
+- Whether tests cover only mock happy paths.
