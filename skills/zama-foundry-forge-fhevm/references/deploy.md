@@ -84,31 +84,82 @@ Local 有两层部署：
 启动 Anvil：
 
 ```bash
-anvil
+anvil --host 127.0.0.1 --port 8545 --chain-id 31337
 ```
 
 在另一个终端运行 `forge-fhevm` 的本地 host stack 脚本。Soldeer 项目通常在 `dependencies/forge-fhevm-<version>/deploy-local.sh`，submodule 项目通常在 `lib/forge-fhevm/deploy-local.sh`：
 
 ```bash
-./dependencies/forge-fhevm-<version>/deploy-local.sh
+LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545
 ```
+
+`LOCAL_STATE_RPC_NAMESPACE=anvil` 很重要。`deploy-local.sh` 会用 `cast client` 探测本地 RPC 是 Anvil 还是 Hardhat；在某些环境里 `cast client` 输出为空，脚本会报 `could not detect a supported local RPC backend`。如果任务明确只支持 Anvil，本地 wrapper 脚本应直接设置这个环境变量，而不是依赖自动探测。
 
 非默认端口：
 
 ```bash
-./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8546
+LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8546
 ```
 
 多个本地节点：
 
 ```bash
-./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545 --anvil-port 8546
+LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545 --anvil-port 8546
 ```
 
 复用已 build artifacts：
 
 ```bash
-./dependencies/forge-fhevm-<version>/deploy-local.sh --skip-build --anvil-port 8545
+LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --skip-build --anvil-port 8545
+```
+
+fish shell 不能使用 `NAME=value command` 形式时，用：
+
+```fish
+env LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545
+```
+
+如果封装 root-level npm script，推荐用 Node wrapper 查找版本化目录，并把环境变量传给子进程：
+
+```js
+import { access, readdir } from "node:fs/promises";
+import { constants } from "node:fs";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+
+const root = process.cwd();
+const dependencies = join(root, "dependencies");
+
+async function executable(path) {
+  try {
+    await access(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findDeployLocal() {
+  for (const entry of await readdir(dependencies, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith("forge-fhevm-")) continue;
+    const script = join(dependencies, entry.name, "deploy-local.sh");
+    if (await executable(script)) return script;
+  }
+  throw new Error("Run forge soldeer install before local FHEVM deploy.");
+}
+
+const script = await findDeployLocal();
+const result = spawnSync(script, ["--anvil-port", "8545"], {
+  cwd: root,
+  stdio: "inherit",
+  shell: false,
+  env: {
+    ...process.env,
+    LOCAL_STATE_RPC_NAMESPACE: process.env.LOCAL_STATE_RPC_NAMESPACE ?? "anvil",
+  },
+});
+
+process.exit(result.status ?? 1);
 ```
 
 部署 dApp 时仍优先走 keystore。第一次本地调试可以把 Anvil 的公开测试私钥交互式导入一个本地账户：
@@ -123,11 +174,36 @@ forge script script/DeployConfidentialVault.s.sol:DeployConfidentialVault \
   --broadcast
 ```
 
+如果任务要求 disposable local demo 一键跑通，root scripts 可以组合 host stack 和 dApp 部署，并使用 Anvil 默认解锁账户；真实测试网或生产部署仍用 keystore。README 必须明确先启动 Anvil：
+
+```json
+{
+  "scripts": {
+    "anvil": "anvil --host 127.0.0.1 --port 8545 --chain-id 31337",
+    "deploy:fhevm": "node scripts/deploy-fhevm-local.mjs",
+    "deploy:local": "npm run deploy:fhevm && forge script script/DeployLocal.s.sol:DeployLocal --rpc-url http://127.0.0.1:8545 --broadcast --unlocked --sender 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+  }
+}
+```
+
+如果 `DeployLocal.s.sol` 要写入前端地址文件或 `deployments/local.json`，`foundry.toml` 必须允许写入目标目录，否则 `vm.writeJson` 会部署成功后回滚脚本：
+
+```toml
+[profile.default]
+fs_permissions = [
+  { access = "read-write", path = "./frontend/src/contracts" },
+  { access = "read-write", path = "./deployments" }
+]
+```
+
 Local 注意事项：
 
 - `deploy-local.sh` 不需要 `.env`，默认使用 Anvil key、mock gateway、mock KMS/input signer。
+- `set LOCAL_STATE_RPC_NAMESPACE anvil` 在 fish 中只是普通 shell 变量；要传给 npm/Node/bash 子进程，使用 `set -x LOCAL_STATE_RPC_NAMESPACE anvil` 或 `env LOCAL_STATE_RPC_NAMESPACE=anvil npm run deploy:local`。
+- 如果 Anvil 没启动或端口不对，`cast client --rpc-url http://127.0.0.1:8545` 会失败；先修 RPC 可达性，再排查 FHEVM 部署。
 - 它通过本地 RPC 的 `setCode` / `setStorageAt` 把 host contracts materialize 到 `FHEVMHostAddresses.sol` 的固定地址；只适合 Anvil/Hardhat 这类本地节点。
 - 合约测试继承 `FhevmTest` 时不需要先跑 `deploy-local.sh`；`super.setUp()` 会在 Forge 测试环境内部署 host contracts。
+- Anvil 重启会清空链状态；前端里的本地部署地址需要重新生成，不能把一次本地运行的地址当成长期有效配置。
 - 本地 cleartext stack 中 encrypted values 实际以明文跟踪，不能用来证明生产隐私安全。
 
 ## Sepolia

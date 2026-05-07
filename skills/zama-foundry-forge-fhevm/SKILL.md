@@ -25,9 +25,11 @@ description: 使用 Foundry 和 forge-fhevm 开发、测试、部署 Zama FHEVM 
 
 - 先检查当前项目实际安装的 `forge-fhevm/FhevmTest.sol`、`deploy-local.sh`、`deploy.sh`，再套用 reference 示例。
 - `forge-fhevm` 当前要求 Solidity `^0.8.27` 和 `evm_version = "cancun"`。
+- 不要把 `@fhevm-solidity`、`@encrypted-types` 等 Soldeer 依赖写成 `latest`；先用本 skill 的已验证版本启动，升级时再查询 registry 并同步 `foundry.toml`、`soldeer.lock` 和 `remappings.txt`。
 - 覆写 Forge 测试的 `setUp()` 时先调用 `super.setUp()`。
 - `FhevmTest.decrypt` 是测试用明文读取，不执行 ACL 检查；涉及权限时必须覆盖 `publicDecrypt` 或 `userDecrypt`。
 - 实际部署不要在 `.env` 或脚本中保存 private key；使用 Foundry keystore，脚本用 `vm.startBroadcast()`，命令行用 `forge script --account <name>`。
+- 本地 Anvil-only demo 的 deploy wrapper 应显式设置 `LOCAL_STATE_RPC_NAMESPACE=anvil`，避免 `cast client` 探测为空；如果部署脚本写 JSON，必须在 `foundry.toml` 配 `fs_permissions`。
 - 本地 cleartext FHEVM stack 只服务开发与测试，不代表生产链隐私部署。
 
 ## 上游依据

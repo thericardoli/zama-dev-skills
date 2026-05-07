@@ -3,19 +3,30 @@
 核心原则：
 
 - 默认使用 Soldeer 管理依赖。
-- 普通 Soldeer 包可以使用 `latest`。
-- `forge-fhevm` 和 `@openzeppelin-confidential-contracts` 使用 git URL，并固定到最新 `rev`。
+- 不要在 `foundry.toml` 里把 FHE 相关包写成 `latest`；`forge soldeer install` 会把 `latest` 解析成 `@pkg~latest`，部分 Zama 包会安装失败。
+- 先从下面的已验证版本启动；升级时查询 Soldeer registry / git `rev`，再同步 `foundry.toml`、`soldeer.lock` 和 `remappings.txt`。
+- `forge-fhevm` 使用 git URL，并固定到已验证 `rev`。
 - Solidity 编译器版本必须不低于 `0.8.27`。
 - EVM 版本必须不低于 `cancun`。
 - 不能使用 Soldeer 时，再使用 git submodule fallback。
 
-## 版本与 rev
+## 已验证版本
 
-创建或更新项目时，先刷新两个 git dependency 的最新 `rev`：
+优先用这组版本让项目先跑通：
+
+| 依赖 | 版本 |
+| --- | --- |
+| `forge-std` | `1.16.0` |
+| `@fhevm-solidity` | `0.11.1` |
+| `@encrypted-types` | `0.0.4` |
+| `forge-fhevm` | git `60864a00bc7f5361c9026d80ca34e40687a6d2d2`，version label `60864a0` |
+
+如果任务明确要求 ERC7984 或 OpenZeppelin confidential contracts，再额外加入对应依赖；普通 counter、vault、auction 这类自定义 encrypted state 通常不需要 OpenZeppelin confidential contracts。
+
+更新 `forge-fhevm` 时，先刷新 git dependency 的 `rev`：
 
 ```bash
 git ls-remote https://github.com/zama-ai/forge-fhevm HEAD
-git ls-remote https://github.com/OpenZeppelin/openzeppelin-confidential-contracts HEAD
 ```
 
 ## 推荐 foundry.toml
@@ -41,13 +52,10 @@ runs = 256
 line_length = 120
 
 [dependencies]
-forge-std = "latest"
-"@fhevm-solidity" = "latest"
-"@encrypted-types" = "latest"
-"@openzeppelin-contracts" = "latest"
-"@openzeppelin-contracts-upgradeable" = "latest"
+forge-std = "1.16.0"
+"@fhevm-solidity" = "0.11.1"
+"@encrypted-types" = "0.0.4"
 forge-fhevm = { version = "60864a0", git = "https://github.com/zama-ai/forge-fhevm.git", rev = "60864a00bc7f5361c9026d80ca34e40687a6d2d2" }
-"@openzeppelin-confidential-contracts" = { version = "03ffadd", git = "https://github.com/OpenZeppelin/openzeppelin-confidential-contracts.git", rev = "03ffaddf3520532fc396ecc612f10799335dd569" }
 
 [soldeer]
 remappings_version = false
@@ -59,8 +67,8 @@ recursive_deps = true
 - `solc = "0.8.27"` 是最低推荐值。已有项目可以使用更新编译器，但不要低于 `0.8.27`。
 - `evm_version = "cancun"` 是最低推荐 EVM 版本。已有项目可以使用更新 EVM 版本，但不要低于 `cancun`。
 - `optimizer_runs = 800` 是推荐起点；如果项目已有明确 gas/bytecode 策略，遵循项目配置。
-- 如果项目不使用 upgradeable contracts，可以删除 `@openzeppelin-contracts-upgradeable`。
-- 如果项目不使用 ERC7984 或 OpenZeppelin confidential contracts，可以删除 `@openzeppelin-confidential-contracts`。
+- 如果部署脚本会用 `vm.writeJson` 或写入 ABI/address 文件，在 `[profile.default]` 增加最小 `fs_permissions`，例如 `{ access = "read-write", path = "./deployments" }` 和前端合约配置目录。
+- 如果项目使用 OpenZeppelin 普通 contracts，显式添加并固定真实版本，不要混用 `latest` 和手写 remapping。
 
 ## 安装命令
 
@@ -84,7 +92,7 @@ forge test -vv
 
 ## remappings
 
-Soldeer 安装后会在 `dependencies/` 下创建带版本标签的目录。由于普通包使用 `latest`，实际目录名取决于 Soldeer resolve 出来的版本；不要在 skill 中硬编码普通包的版本后缀。
+Soldeer 安装后会在 `dependencies/` 下创建带版本标签的目录。不要猜版本后缀；安装后按实际目录写 `remappings.txt`。
 
 推荐写法是安装后确认目录：
 
@@ -97,20 +105,17 @@ forge remappings
 
 ```text
 @fhevm/host-contracts/=dependencies/forge-fhevm-60864a0/src/fhevm-host/
-@fhevm/solidity/=dependencies/@fhevm-solidity-<resolved-version>/
-@openzeppelin-contracts-upgradeable/=dependencies/@openzeppelin-contracts-upgradeable-<resolved-version>/
-@openzeppelin-contracts/=dependencies/@openzeppelin-contracts-<resolved-version>/
-@openzeppelin/confidential-contracts/=dependencies/@openzeppelin-confidential-contracts-03ffadd/contracts/
-encrypted-types/=dependencies/@encrypted-types-<resolved-version>/
+@fhevm/solidity/=dependencies/@fhevm-solidity-0.11.1/
+encrypted-types/=dependencies/@encrypted-types-0.0.4/
 forge-fhevm/=dependencies/forge-fhevm-60864a0/src/
-forge-std/=dependencies/forge-std-<resolved-version>/src
+forge-std/=dependencies/forge-std-1.16.0/src
 ```
 
-如果刷新了 git dependency 的 `rev`，同步更新：
+如果刷新了依赖版本或 git `rev`，同步更新：
 
 - `foundry.toml` 中的 `version` 和 `rev`
 - `soldeer.lock`
-- `remappings.txt` 中 `forge-fhevm-<version>` 和 `@openzeppelin-confidential-contracts-<version>` 路径
+- `remappings.txt` 中所有版本化目录路径
 
 ## 目录结构
 
