@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zama-dev-skills.local/evals/task.schema.json",
+  "title": "Zama Codex Eval Task",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "prompt"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+      "description": "Stable task id. Used in runs/<task-id>/(baseline|skills)/<timestamp>/."
+    },
+    "description": {
+      "type": ["string", "null"],
+      "description": "Optional longer task description."
+    },
+    "fixture": {
+      "type": ["string", "null"],
+      "description": "Optional path to a fixture directory or file, relative to evals/ unless absolute."
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Prompt passed to Codex CLI."
+    },
+    "baseline": {
+      "type": ["boolean", "null"],
+      "default": true,
+      "description": "Whether to run the task once without repo skills. Null is treated as true."
+    },
+    "skills": {
+      "description": "Skills copied into CODEX_HOME for the skills run. Use a list of skill names from SKILL.md frontmatter, 'all' for every repo skill, or null to disable the skills run.",
+      "oneOf": [
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        {
+          "type": "string",
+          "const": "all"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "all"
+    },
+    "codex": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "type": ["string", "null"],
+          "default": "codex",
+          "description": "Codex executable path or command name."
+        },
+        "model": {
+          "type": ["string", "null"],
+          "description": "Model passed to codex exec with -m."
+        },
+        "think_level": {
+          "type": ["string", "null"],
+          "enum": ["low", "medium", "high", "xhigh", null],
+          "description": "Reasoning effort written to model_reasoning_effort."
+        },
+        "timeout_sec": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "default": 1200,
+          "description": "Timeout for the Codex run."
+        },
+        "search": {
+          "type": ["boolean", "null"],
+          "default": false,
+          "description": "Whether to pass --search to codex exec."
+        },
+        "args": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          },
+          "description": "Extra raw arguments appended before the prompt stdin marker."
+        }
+      }
+    },
+    "artifacts": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "include": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          },
+          "description": "Reserved for future artifact collection. Currently documented only."
+        }
+      }
+    }
+  }
+}
