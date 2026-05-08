@@ -71,6 +71,8 @@ event ErrorChanged(address indexed user);
 constructor() {
     NO_ERROR = FHE.asEuint8(0);
     NOT_ENOUGH_FUNDS = FHE.asEuint8(1);
+    FHE.allowThis(NO_ERROR);
+    FHE.allowThis(NOT_ENOUGH_FUNDS);
 }
 
 function _setLastError(address user, euint8 code) internal {
@@ -87,6 +89,8 @@ function _setLastError(address user, euint8 code) internal {
 ebool ok = FHE.ge(balance, amount);
 _setLastError(msg.sender, FHE.select(ok, NO_ERROR, NOT_ENOUGH_FUNDS));
 ```
+
+encrypted 常量如果会在后续交易中复用，也需要在初始化时给合约自身持久权限。
 
 前端监听 `ErrorChanged`，读取 handle 后 user decrypt。
 

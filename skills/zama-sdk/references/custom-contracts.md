@@ -185,7 +185,7 @@ Decrypted values 会被 cache，并按 signer 和 contract 维度隔离。取决
 
 ## 公开解密
 
-public decrypt 只用于合约明确允许公开的值。Solidity 侧通常需要对目标 handle 调用公开解密授权，例如 `FHE.allowForDecryption(handle)`，再由 off-chain relayer/KMS 返回 clear value 和 proof。
+public decrypt 只用于合约明确允许公开的值。Solidity 侧通常需要对目标 encrypted value 调用公开解密授权，例如 `FHE.makePubliclyDecryptable(value)`，再由 off-chain relayer/KMS 返回 clear value 和 proof。`allowForDecryption` 是 ACL 合约的底层接口；业务合约中不要写成 `FHE.allowForDecryption(...)`。
 
 ```ts
 const {

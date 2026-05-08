@@ -13,6 +13,10 @@ function requestResult() external {
     FHE.makePubliclyDecryptable(_result);
     emit ResultRequested(_result);
 }
+
+function result() external view returns (euint64) {
+    return _result;
+}
 ```
 
 测试侧：
