@@ -7,38 +7,75 @@
 不要把 private key 写进 `.env`、脚本或 CI log。模板使用 Hardhat vars：
 
 ```bash
-npx hardhat vars set MNEMONIC
-npx hardhat vars set INFURA_API_KEY
+npx hardhat vars set SEPOLIA_MNEMONIC
+npx hardhat vars set SEPOLIA_RPC_URL
 npx hardhat vars set ETHERSCAN_API_KEY
 npx hardhat vars setup
 ```
 
 注意：Hardhat vars 存在项目代码之外，适合避免把 secret 提交进仓库，但它不是加密 keystore。生产部署优先用硬件钱包、multisig、KMS 或受控 secret manager。
 
-`hardhat.config.ts` 用 `vars.get`：
+`hardhat.config.ts` 可以为本地网络使用固定测试 mnemonic，但 live network 必须用独立变量，不能有默认 signer：
 
 ```ts
 import { vars } from "hardhat/config";
 
-const MNEMONIC = vars.get("MNEMONIC", "test test test test test test test test test test test junk");
-const INFURA_API_KEY = vars.get("INFURA_API_KEY", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+const LOCAL_MNEMONIC = "test test test test test test test test test test test junk";
+const SEPOLIA_RPC_URL = vars.get("SEPOLIA_RPC_URL", "");
+const SEPOLIA_MNEMONIC = vars.get("SEPOLIA_MNEMONIC", "");
+
+function liveMnemonicAccounts(mnemonic: string) {
+  if (!mnemonic) return [];
+  if (mnemonic === LOCAL_MNEMONIC) {
+    throw new Error("Refusing to use the public Hardhat test mnemonic on a live network.");
+  }
+  return { mnemonic, path: "m/44'/60'/0'/0/", count: 10 };
+}
+
+// hardhat: { accounts: { mnemonic: LOCAL_MNEMONIC } }
+// sepolia: { url: SEPOLIA_RPC_URL, accounts: liveMnemonicAccounts(SEPOLIA_MNEMONIC) }
 ```
 
 不要写：
 
 ```ts
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const MNEMONIC = vars.get("MNEMONIC", LOCAL_MNEMONIC);
+// 然后把同一个 MNEMONIC 同时用于 hardhat 和 sepolia
 ```
+
+Live deploy 脚本还应在第一步显式检查配置，给出清晰错误，而不是等 RPC 或 signer 报模糊异常。
 
 ## deploy 脚本
 
 `deploy/001_deploy_vault.ts`：
 
 ```ts
+import { vars } from "hardhat/config";
 import type { DeployFunction } from "hardhat-deploy/types";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 
+const LOCAL_MNEMONIC = "test test test test test test test test test test test junk";
+
+function requireVar(name: string): string {
+  const value = vars.get(name, "");
+  if (!value) throw new Error(`Missing Hardhat var ${name}. Run: npx hardhat vars set ${name}`);
+  return value;
+}
+
+function assertLiveNetworkConfig(hre: HardhatRuntimeEnvironment) {
+  if (hre.network.name === "sepolia") {
+    requireVar("SEPOLIA_RPC_URL");
+    const mnemonic = requireVar("SEPOLIA_MNEMONIC");
+    if (mnemonic === LOCAL_MNEMONIC) {
+      throw new Error("Refusing to deploy Sepolia with the public Hardhat test mnemonic.");
+    }
+  }
+}
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  assertLiveNetworkConfig(hre);
+
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
@@ -63,13 +100,13 @@ func.tags = ["ConfidentialVault"];
 终端 1：
 
 ```bash
-npm run chain
+pnpm run chain
 ```
 
 终端 2：
 
 ```bash
-npm run deploy:localhost
+pnpm run deploy:localhost
 # 或
 npx hardhat deploy --network localhost
 ```
@@ -94,8 +131,8 @@ Sepolia 使用真实 FHEVM 加密和 Zama relayer，不跑 mock-only 断言。
 前置：
 
 ```bash
-npx hardhat vars set MNEMONIC
-npx hardhat vars set INFURA_API_KEY
+npx hardhat vars set SEPOLIA_MNEMONIC
+npx hardhat vars set SEPOLIA_RPC_URL
 npx hardhat vars set ETHERSCAN_API_KEY
 ```
 
@@ -116,6 +153,8 @@ npx hardhat test --network sepolia
 Sepolia 注意事项：
 
 - 确认合约继承 `ZamaEthereumConfig`。
+- 部署命令必须在缺少 `SEPOLIA_RPC_URL`、`SEPOLIA_MNEMONIC` 或受控 signer 配置时清晰失败。
+- 不要把 public Hardhat test mnemonic、占位 RPC、空 accounts 当成 Sepolia 的 fallback。
 - 确认前端/task 生成 encrypted input 时使用的 contract address、user address、chain id、relayer config 与 Sepolia 一致。
 - Sepolia e2e 慢，给测试设置更长 timeout。
 - 不要把 mock-only `fhevm.debugger.decrypt*` 或 `fhevm.isMock` suite 直接跑到 Sepolia。

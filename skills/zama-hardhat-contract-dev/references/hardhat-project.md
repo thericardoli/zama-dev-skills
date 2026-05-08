@@ -53,8 +53,18 @@ import "hardhat-deploy";
 import type { HardhatUserConfig } from "hardhat/config";
 import { vars } from "hardhat/config";
 
-const MNEMONIC = vars.get("MNEMONIC", "test test test test test test test test test test test junk");
-const INFURA_API_KEY = vars.get("INFURA_API_KEY", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+const LOCAL_MNEMONIC = "test test test test test test test test test test test junk";
+const SEPOLIA_RPC_URL = vars.get("SEPOLIA_RPC_URL", "");
+const SEPOLIA_MNEMONIC = vars.get("SEPOLIA_MNEMONIC", "");
+const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY", "");
+
+function liveMnemonicAccounts(mnemonic: string) {
+  if (!mnemonic) return [];
+  if (mnemonic === LOCAL_MNEMONIC) {
+    throw new Error("Refusing to use the public Hardhat test mnemonic on a live network.");
+  }
+  return { mnemonic, path: "m/44'/60'/0'/0/", count: 10 };
+}
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -63,18 +73,21 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      accounts: { mnemonic: MNEMONIC },
+      accounts: { mnemonic: LOCAL_MNEMONIC },
+      chainId: 31337,
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545",
       chainId: 31337,
     },
     sepolia: {
-      accounts: {
-        mnemonic: MNEMONIC,
-        path: "m/44'/60'/0'/0/",
-        count: 10,
-      },
+      accounts: liveMnemonicAccounts(SEPOLIA_MNEMONIC),
       chainId: 11155111,
-      url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
+      url: SEPOLIA_RPC_URL,
     },
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY,
   },
   solidity: {
     version: "0.8.27",
@@ -95,9 +108,11 @@ export default config;
 注意：
 
 - FHEVM 需要 Cancun EVM。
-- 模板用 `vars.get("MNEMONIC")`，不是 `.env PRIVATE_KEY`。
-- Hardhat vars 降低误提交 `.env` 的风险，但仍是本地明文文件；不要用于高价值生产密钥。
-- 如果项目已用 `dotenv`，迁移时把 `process.env.KEY` 改为 `vars.get("KEY")`，并运行 `npx hardhat vars setup`。
+- 本地 `hardhat` / `localhost` 可以使用公开测试 mnemonic；Sepolia/mainnet 不能复用它。
+- Live network signer 使用独立变量，例如 `SEPOLIA_MNEMONIC`，不要写成 `vars.get("MNEMONIC", LOCAL_MNEMONIC)` 后同时喂给 local 和 Sepolia。
+- `SEPOLIA_RPC_URL` 和 `SEPOLIA_MNEMONIC` 缺失时，部署脚本必须 fail fast；不要用占位 Infura key、空 URL 或默认 mnemonic 让命令继续跑。
+- Hardhat vars 降低误提交 `.env` 的风险，但仍是本地明文文件；生产部署优先使用硬件钱包、multisig、KMS 或受控 secret manager。
+- 如果项目已用 `dotenv`，迁移时把 live secrets 改为 Hardhat vars 或受控 signer，并运行 `npx hardhat vars setup`。
 
 ## 合约基线
 

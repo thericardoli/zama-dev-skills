@@ -29,7 +29,8 @@ description: 使用 Hardhat 开发、测试、部署 Zama FHEVM confidential con
 - TypeScript 测试里优先从 `hardhat` 导入 `ethers, fhevm`，从 `@fhevm/hardhat-plugin` 导入 `FhevmType`。
 - `fhevm.isMock` 为 true 的 mock 测试可以使用本地 decrypt helper；Sepolia/mainnet 是真实 FHEVM 环境，测试应独立分组。
 - Hardhat task 中必须先调用 `await fhevm.initializeCLIApi()`，普通 `hardhat test` 不需要手动调用。
-- 部署不要把 private key 写进 `.env`；模板使用 `npx hardhat vars set MNEMONIC`，但 Hardhat vars 是本地明文存储，高价值部署应使用硬件钱包、multisig 或受控 secret manager。
+- 部署不要把 private key 写进 `.env`；live networks（Sepolia/mainnet）也不能 fallback 到 Hardhat 默认测试 mnemonic、占位 RPC 或空 signer。缺少 signer/RPC 时必须 fail fast，并给出需要设置的 Hardhat vars 或 secret manager 配置。
+- 本地 `hardhat` / `localhost` 可以使用公开测试 mnemonic；Sepolia/mainnet 必须使用独立的 network-specific signer，例如 `SEPOLIA_MNEMONIC`、硬件钱包、multisig 或受控 secret manager。Hardhat vars 是本地明文存储，不适合高价值生产密钥。
 
 ## 上游依据
 

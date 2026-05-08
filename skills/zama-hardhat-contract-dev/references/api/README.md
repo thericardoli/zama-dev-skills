@@ -25,12 +25,3 @@ await vault.connect(alice).deposit(encrypted.handles[0], encrypted.inputProof);
 const handle = await vault.balanceOf(alice.address);
 const clear = await fhevm.userDecryptEuint(FhevmType.euint64, handle, contractAddress, alice);
 ```
-
-## 记住这几个坑
-
-- `createEncryptedInput(contractAddress, userAddress)` 同时绑定 target contract 和 user。
-- `encrypt()` 返回 `handles` 和 `inputProof`，不是 `proof`。
-- Solidity 的 `externalEuintXX` 在 ABI/TypeChain 中通常是 `bytes32`。
-- `userDecryptEuint` 会检查 ACL；`fhevm.debugger.decryptEuint` 是 mock/debug 工具，不应用来证明权限。
-- Hardhat task 里要先 `await fhevm.initializeCLIApi()`。
-- mock 测试和 Sepolia e2e 测试不要混在一个无条件 suite 里。
