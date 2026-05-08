@@ -208,6 +208,48 @@ Signer 需要提供 chain id、account address、typed-data signatures、contrac
 
 `WagmiSigner` 是首选，但它依赖 SDK 和 wagmi 的内部 action export 兼容。遇到 bundle-time export mismatch 时，用项目本地 signer 实现 `GenericSigner`：
 
+```ts
+import type { EIP712TypedData, GenericSigner } from "@zama-fhe/sdk";
+import type { Config } from "wagmi";
+import {
+  getAccount,
+  getBlock,
+  getChainId,
+  readContract,
+  signTypedData,
+  waitForTransactionReceipt,
+  writeContract,
+} from "wagmi/actions";
+
+export function createWagmiGenericSigner(config: Config): GenericSigner {
+  return {
+    getChainId: () => Promise.resolve(getChainId(config)),
+    async getAddress() {
+      const account = getAccount(config);
+      if (!account.address) throw new TypeError("Wallet not connected");
+      return account.address;
+    },
+    signTypedData(typedData: EIP712TypedData) {
+      const { EIP712Domain: _, ...types } = typedData.types;
+      return signTypedData(config, {
+        primaryType: Object.keys(types)[0]!,
+        types,
+        domain: typedData.domain,
+        message: typedData.message,
+      });
+    },
+    writeContract: (args) => writeContract(config, args as Parameters<typeof writeContract>[1]),
+    readContract: (args) => readContract(config, args),
+    waitForTransactionReceipt: (hash) => waitForTransactionReceipt(config, { hash }),
+    async getBlockTimestamp() {
+      return (await getBlock(config)).timestamp;
+    },
+  };
+}
+```
+
+这个 fallback 刻意省略 `subscribe`。如果你的钱包栈能可靠监听 disconnect、account change 和 chain change，再补上 `subscribe(callbacks)`，并在事件里调用对应 callback；否则在钱包生命周期事件中手动 `sdk.revokeSession()` 和刷新 query。
+
 ## Storage 选择
 
 | Storage | 导入 | 用途 |
@@ -316,7 +358,7 @@ React `ZamaProvider` unmount 时会 dispose 它创建的 SDK。如果 relayer in
 | 选项 | 默认值 | 边界 |
 | --- | --- | --- |
 | `keypairTTL` | `2592000` 秒，30 天 | 必须大于 0；超过 365 天会被 capped |
-| `sessionTTL` | `2592000` 秒，30 天 | `0` 表示每次都签名；也支持 `"infinite"` |
+| `sessionTTL` | `2592000` 秒，30 天 | `0` 表示每次都签名；core `ZamaSDKConfig` 支持 `"infinite"` |
 | `registryTTL` | `86400` 秒，24 小时 | 影响 registry lookup cache |
 
 ```ts
@@ -334,7 +376,7 @@ const sdk = new ZamaSDK({
 
 设置 `sessionTTL: 0` 会禁用 session caching，所有需要 session signature 的操作都会触发钱包签名。只有产品明确需要这种行为时才这样做。
 
-设置 `sessionTTL: "infinite"` 会让 session signature 不主动过期。它适合受控环境或 extension/service 场景，但 keypair 仍然受 `keypairTTL` 约束。
+Core `ZamaSDKConfig` 支持 `sessionTTL: "infinite"`，表示 session signature 不主动过期。它适合受控环境或 extension/service 场景，但 keypair 仍然受 `keypairTTL` 约束。当前 React `ZamaProviderProps` 的发布类型仍是 `sessionTTL?: number`；在 Provider props 上直接传 `"infinite"` 前，先检查本地 `node_modules/@zama-fhe/react-sdk/dist/index.d.ts` 是否已支持。
 
 如果数值型 `sessionTTL` 大于 `keypairTTL`，SDK 会把它 clamp 到 `keypairTTL`，避免 `isAllowed()` 仍为 true 但 keypair 已经过期。
 

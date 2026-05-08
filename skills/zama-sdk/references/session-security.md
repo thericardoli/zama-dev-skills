@@ -43,7 +43,7 @@ FHE private key 的明文只应在单次操作的 JS 内存中短暂存在；持
 - `keypairTTL: 0` 会抛错，因为 relayer 连接需要 keypair。
 - `keypairTTL` 超过 365 天会被 capped 到 365 天并输出 warning。
 - `sessionTTL: 0` 表示不缓存 session signature，每次需要 credentials 的操作都会要求钱包签名。
-- `sessionTTL: "infinite"` 表示 session signature 不主动过期；只在高信任环境里使用，并记住 keypair 仍受 `keypairTTL` 约束。
+- Core `ZamaSDKConfig` 中 `sessionTTL: "infinite"` 表示 session signature 不主动过期；只在高信任环境里使用，并记住 keypair 仍受 `keypairTTL` 约束。React `ZamaProviderProps` 当前类型是 `number`，Provider 上使用字符串前先查本地类型。
 - 如果数值型 `sessionTTL` 大于 `keypairTTL`，SDK 会把它 clamp 到 `keypairTTL`。
 
 示例：

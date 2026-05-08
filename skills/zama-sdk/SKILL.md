@@ -1,6 +1,6 @@
 ---
 name: zama-sdk
-description: 使用新版 Zama SDK 构建 FHEVM dApp、脚本、后端或 React 前端时使用。适用于 @zama-fhe/sdk、@zama-fhe/react-sdk、RelayerWeb、RelayerNode、RelayerCleartext、ZamaSDK、ZamaProvider、WagmiSigner/ViemSigner/EthersSigner、encrypted input、user decrypt、public decrypt、delegated decrypt、ERC7984 confidential token、wagmi/viem/ethers 集成。
+description: 使用 Zama SDK 构建 FHEVM dApp、脚本、后端或 React 前端时使用。适用于 @zama-fhe/sdk、@zama-fhe/react-sdk、RelayerWeb、RelayerNode、RelayerCleartext、ZamaSDK、ZamaProvider、WagmiSigner/ViemSigner/EthersSigner、encrypted input、user decrypt、public decrypt、delegated decrypt、ERC7984 confidential token、wagmi/viem/ethers 集成。
 ---
 
 # Zama SDK

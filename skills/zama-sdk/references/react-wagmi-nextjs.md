@@ -216,9 +216,14 @@ Token hooks：
 | `useConfidentialTransfer` | encrypted transfer |
 | `useConfidentialTransferFrom` | operator transfer |
 | `useConfidentialApprove` | confidential operator approval |
+| `useUnderlyingAllowance` | 检查 underlying ERC20 对 wrapper 的 allowance |
+| `useApproveUnderlying` | 单独执行 underlying ERC20 approval |
 | `useUnshield` | confidential token 转 public ERC20 |
 | `useResumeUnshield` | 恢复 pending unshield |
 | `useMetadata` | 读取 token name、symbol、decimals |
+| `useTotalSupply` | 读取 confidential token total supply |
+
+`useConfidentialBalance` 和 `useConfidentialBalances` 当前发布类型读取当前 signer 的 owner。需要任意 owner 时，用 `sdk.createReadonlyToken(tokenAddress).balanceOf(owner)`，或基于 `@zama-fhe/sdk/query` 自己组合 query。
 
 Registry 和 discovery hooks：
 
@@ -226,8 +231,10 @@ Registry 和 discovery hooks：
 | --- | --- |
 | `useWrappersRegistryAddress` | 当前链 registry |
 | `useListPairs` | 分页读取 public/confidential pairs |
-| `useConfidentialTokenAddress` | public token 转 confidential token |
-| `useTokenAddress` | confidential token 转 public token |
+| `useTokenPairsRegistry` / `useTokenPairsLength` / `useTokenPairsSlice` / `useTokenPair` | 低层 registry pair 读取 |
+| `useConfidentialTokenAddress` | public token 转 confidential token，参数是 `{ tokenAddress }`，返回 `[found, confidentialTokenAddress]` |
+| `useTokenAddress` | confidential token 转 public token，参数是 `{ confidentialTokenAddress }`，返回 `[found, tokenAddress]` |
+| `useIsConfidentialTokenValid` | 验证 registry 返回的 confidential token 是否仍有效 |
 | `useWrapperDiscovery` | 发现 wrapper metadata |
 | `useIsConfidential` / `useIsWrapper` | interface detection |
 

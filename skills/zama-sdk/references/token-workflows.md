@@ -84,6 +84,14 @@ React：
 const { data: balance, isLoading } = useConfidentialBalance({ tokenAddress });
 ```
 
+当前 React hook 读取的是当前 signer 的 balance。如果要展示任意 owner，使用 core API：
+
+```ts
+const rt = sdk.createReadonlyToken(confidentialTokenAddress);
+const balance = await rt.balanceOf(owner);
+const handle = await rt.confidentialBalanceOf(owner);
+```
+
 第一次 decrypt 可能需要钱包签名。之后 cached credentials 和 decrypt cache 会让后续读取免于重复弹窗，直到 TTL、revoke、account change 或 chain change。
 
 ## 私密转账
@@ -220,6 +228,23 @@ await token.approveUnderlying(1000n);
 
 在 `shield(..., { approvalStrategy: "skip" })` 前常用，或用于产品希望把 approval 单独做成一步的场景。
 
+React：
+
+```tsx
+const { data: allowance } = useUnderlyingAllowance({
+  tokenAddress,
+  wrapperAddress,
+});
+
+const approveUnderlying = useApproveUnderlying({
+  tokenAddress,
+  wrapperAddress,
+});
+
+await approveUnderlying.mutateAsync({}); // max approval
+await approveUnderlying.mutateAsync({ amount: 1000n }); // exact approval
+```
+
 ## ReadonlyToken 只读接口
 
 ```ts
@@ -305,9 +330,15 @@ delegation 上链后需要等待 gateway 同步。太快读取可能遇到 `Dele
 
 ```tsx
 const { data: balance } = useConfidentialBalance({ tokenAddress });
+const { data: batch } = useConfidentialBalances({
+  tokenAddresses: [tokenA, tokenB],
+});
 const shield = useShield({ tokenAddress, wrapperAddress });
 const transfer = useConfidentialTransfer({ tokenAddress });
 const unshield = useUnshield({ tokenAddress, wrapperAddress });
+
+const tokenABalance = batch?.results.get(tokenA);
+const tokenAError = batch?.errors.get(tokenA);
 ```
 
 高层 hooks 会把 token objects 包装成 TanStack Query state、mutation state、cache invalidation、cached decryption 和 optimistic balance updates。

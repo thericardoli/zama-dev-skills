@@ -66,12 +66,28 @@ for (const pair of page.items) {
 React：
 
 ```tsx
-const { data } = useConfidentialTokenAddress({ token: publicTokenAddress });
-const { data: reverse } = useTokenAddress({ token: confidentialTokenAddress });
-const { data: pairs } = useListPairs({ page: 1, pageSize: 20, metadata: true });
+const { data } = useConfidentialTokenAddress({
+  tokenAddress: publicTokenAddress,
+});
+
+const confidentialTokenAddress = data?.[0] ? data[1] : undefined;
+
+const { data: isValid } = useIsConfidentialTokenValid({
+  confidentialTokenAddress,
+});
+
+const { data: reverse } = useTokenAddress({
+  confidentialTokenAddress,
+});
+
+const { data: pairs } = useListPairs({
+  page: 1,
+  pageSize: 20,
+  metadata: true,
+});
 ```
 
-始终检查 `isValid`。registry 中查到非零地址不代表仍可用。
+Core `sdk.registry.getConfidentialToken(...)` / `getUnderlyingToken(...)` 返回 structured object，包含 `isValid`。React 的低层 registry hooks 返回 tuple；先检查 tuple 第一个元素是否为 `true`，再用 `useIsConfidentialTokenValid` 验证当前 confidential token 是否仍有效。registry 中查到非零地址不代表仍可用。
 
 ## 余额展示
 
@@ -258,7 +274,7 @@ const { data: feed, isLoading } = useActivityFeed({
 });
 ```
 
-`decrypt: false` 只做事件分类，不解密 encrypted amount。适合公开 activity 列表、未授权状态或性能预览。
+源码中 `decrypt` 默认是 `true`。设置 `decrypt: false` 时只做事件分类，不解密 encrypted amount。适合公开 activity 列表、未授权状态或性能预览。
 
 ## Event Decoders
 
