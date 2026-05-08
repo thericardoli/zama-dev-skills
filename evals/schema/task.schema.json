@@ -83,6 +83,10 @@
           "default": false,
           "description": "Whether to pass --search to codex exec."
         },
+        "fast_mode": {
+          "type": ["boolean", "null"],
+          "description": "Whether to pass --enable fast_mode or --disable fast_mode to codex exec. Null or omitted leaves the Codex CLI default unchanged."
+        },
         "args": {
           "type": ["array", "null"],
           "items": {

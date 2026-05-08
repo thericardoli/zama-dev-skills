@@ -34,6 +34,7 @@ codex:
   model: gpt-5.5
   think_level: medium
   timeout_sec: 1200
+  fast_mode: true
 
 baseline: true
 skills: all

@@ -95,6 +95,7 @@ def prepare_eval_run(
     codex_config = dict(task.get("codex") or {})
     model = codex_config.get("model")
     think_level = codex_config.get("think_level")
+    fast_mode = optional_bool(codex_config.get("fast_mode"), "codex.fast_mode")
 
     prepare_workspace(task, paths, workspace)
     init_git_workspace(workspace)
@@ -109,6 +110,7 @@ def prepare_eval_run(
             "workspace": repo_relative_path(workspace, paths),
             "model": model,
             "think_level": think_level,
+            "fast_mode": fast_mode,
             "skills": selected_skills,
             "codex": codex_config,
             "codex_command": codex_command,
@@ -120,6 +122,7 @@ def prepare_eval_run(
         "task_id": task_id,
         "model": model,
         "think_level": think_level,
+        "fast_mode": fast_mode,
         "skills": selected_skills,
         "codex_exit_code": None,
         "codex_timed_out": False,
@@ -213,6 +216,7 @@ def complete_prepared_run(run_dir: Path, paths: Paths) -> None:
     codex_config = dict(metadata.get("codex") or {})
     model = codex_config.get("model")
     think_level = codex_config.get("think_level")
+    fast_mode = optional_bool(codex_config.get("fast_mode"), "codex.fast_mode")
     timeout_sec = int(codex_config.get("timeout_sec", 1200))
 
     result = read_json(run_dir / "result.json")
@@ -235,6 +239,7 @@ def complete_prepared_run(run_dir: Path, paths: Paths) -> None:
                 or str(codex_config.get("command", "codex")),
                 model=model,
                 think_level=think_level,
+                fast_mode=fast_mode,
                 timeout_sec=timeout_sec,
             )
         finally:
@@ -293,6 +298,7 @@ def run_codex(
     codex_command: str,
     model: str | None,
     think_level: str | None,
+    fast_mode: bool | None,
     timeout_sec: int,
 ) -> dict[str, Any]:
     output_last_message = run_dir / "last-message.md"
@@ -316,6 +322,10 @@ def run_codex(
         command.extend(["-m", str(model)])
     if think_level:
         command.extend(["-c", f'model_reasoning_effort="{think_level}"'])
+    if fast_mode is True:
+        command.extend(["--enable", "fast_mode"])
+    elif fast_mode is False:
+        command.extend(["--disable", "fast_mode"])
     if codex_config.get("search"):
         command.append("--search")
     command.extend([str(arg) for arg in (codex_config.get("args") or [])])
@@ -355,6 +365,14 @@ def run_codex(
                     else str(exc.stderr).encode("utf-8")
                 )
         return {"exit_code": None, "timed_out": True}
+
+
+def optional_bool(value: Any, field_path: str) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    raise ValueError(f"Task field `{field_path}` must be a boolean or null")
 
 
 def write_codex_events_report(run_dir: Path) -> Path | None:

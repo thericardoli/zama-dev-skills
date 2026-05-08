@@ -35,6 +35,7 @@ prompt: |
 codex:
   model: gpt-5.5
   think_level: medium
+  fast_mode: true
 
 baseline: true
 skills: all
@@ -50,6 +51,7 @@ codex:
   model: gpt-5.5
   think_level: medium
   timeout_sec: 1200
+  fast_mode: true
   search: false
   args: []
 
@@ -64,6 +66,8 @@ skills:
 `fixture`, `baseline`, and `skills` are optional. If no fixture is provided, the runner creates an empty workspace. If `baseline` is omitted, it defaults to `true`. If `skills` is omitted, it defaults to `all`.
 
 The runner starts Codex with `--dangerously-bypass-approvals-and-sandbox` for every task so agents can install dependencies, clone repositories, and access the network during eval runs.
+
+Set `codex.fast_mode` to `true` to pass `--enable fast_mode`, or `false` to pass `--disable fast_mode`. Omit it or set it to `null` to leave the Codex CLI default unchanged.
 
 `skills` accepts:
 
