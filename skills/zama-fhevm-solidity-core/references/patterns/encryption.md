@@ -1,25 +1,25 @@
-# 开发模式：加密输入
+# Development Pattern: Encrypted Inputs
 
-## 适用场景
+## When to Use
 
-当合约函数需要接收用户隐私输入时，使用 external encrypted input 模式。典型场景包括：
+Use the external encrypted input pattern when a contract function needs to receive private user input. Typical scenarios include:
 
 - confidential token mint/transfer amount
-- 私密投票选择
-- sealed-bid auction 出价
-- 隐私游戏操作
-- 用户提交的私密阈值、地址、布尔开关
+- private voting choices
+- sealed-bid auction bids
+- private game actions
+- private thresholds, addresses, or boolean flags submitted by users
 
-## 两种 encrypted value 来源
+## Two Sources of Encrypted Values
 
-FHEVM 合约里常见两种 encrypted value 来源：
+FHEVM contracts commonly use two sources of encrypted values:
 
-1. **链下用户输入加密**：客户端在链下生成 `externalEuintXX` 和 `inputProof`，合约用 `FHE.fromExternal` 验证。具体生成方式取决于前端 SDK、Hardhat 或 Foundry skill。
-2. **链上 trusted value 转换**：合约用 `FHE.asEuintXX(clear)` 把可信明文常量或部署参数转成 encrypted value。
+1. **Off-chain user input encryption**: the client generates an `externalEuintXX` and `inputProof` off-chain, then the contract verifies them with `FHE.fromExternal`. The exact generation flow depends on the frontend SDK, Hardhat, or Foundry skill.
+2. **On-chain trusted value conversion**: the contract converts trusted plaintext constants or deployment parameters into encrypted values with `FHE.asEuintXX(clear)`.
 
-用户输入必须走第一种。不要用 `FHE.asEuintXX` 接收不可信用户输入。
+User input must use the first path. Do not use `FHE.asEuintXX` to accept untrusted user input.
 
-## 合约侧接收加密输入
+## Receiving Encrypted Inputs in Contracts
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -46,16 +46,16 @@ contract ConfidentialCounter is ZamaEthereumConfig {
 }
 ```
 
-要点：
+Key points:
 
-- `externalEuint32` 是外部 handle 参数，不是内部可直接计算的 `euint32`。
-- `inputProof` 可以覆盖同一笔交易中多个 encrypted input。
-- `FHE.fromExternal` 是验证边界。所有用户输入都应在这里进入 encrypted domain。
-- 验证后的 `amount` 可以传入 `FHE.add`、`FHE.sub`、`FHE.select` 等 API。
+- `externalEuint32` is an external handle parameter, not an internal `euint32` that can be computed over directly.
+- `inputProof` can cover multiple encrypted inputs in the same transaction.
+- `FHE.fromExternal` is the verification boundary. All user input should enter the encrypted domain here.
+- After verification, `amount` can be passed to APIs such as `FHE.add`, `FHE.sub`, and `FHE.select`.
 
-## 多个 encrypted input
+## Multiple Encrypted Inputs
 
-多个输入可以打包进同一个 ciphertext/proof。合约侧可以接收多个 `externalE*`，最后共用一个 `bytes inputProof`：
+Multiple inputs can be packed into the same ciphertext/proof. On the contract side, receive multiple `externalE*` values and share one final `bytes inputProof`:
 
 ```solidity
 function initialize(
@@ -81,17 +81,17 @@ function initialize(
 }
 ```
 
-客户端必须保持 handles 与 Solidity 参数的语义对应。文档说明 Solidity 参数顺序不要求和构造输入顺序固定一致，但实际开发中应保持一致，减少错配风险。
+The client must keep handles semantically aligned with the Solidity parameters. The documentation notes that Solidity parameter order does not have to match input construction order exactly, but in practice you should keep them aligned to reduce mismatch risk.
 
-框架侧生成 encrypted input 的具体写法放在对应 skill：
+Framework-specific encrypted input generation belongs in the corresponding skill:
 
-- Hardhat：`zama-hardhat-contract-dev`
-- Foundry/forge-fhevm：`zama-foundry-forge-fhevm`
-- React/wagmi/viem、Node 脚本或低层 SDK：`zama-sdk`
+- Hardhat: `zama-hardhat-contract-dev`
+- Foundry/forge-fhevm: `zama-foundry-forge-fhevm`
+- React/wagmi/viem, Node scripts, or lower-level SDK usage: `zama-sdk`
 
-## Trusted value 转换
+## Trusted Value Conversion
 
-适合初始供应量、管理员配置、常量：
+Suitable for initial supply, administrator configuration, and constants:
 
 ```solidity
 euint64 initial = FHE.asEuint64(1_000);
@@ -99,19 +99,19 @@ FHE.allowThis(initial);
 FHE.allow(initial, owner);
 ```
 
-不适合：
+Not suitable:
 
 ```solidity
 function deposit(uint64 clearAmount) external {
-    euint64 amount = FHE.asEuint64(clearAmount); // 用户明文输入，隐私已泄露
+    euint64 amount = FHE.asEuint64(clearAmount); // user plaintext input; privacy is already lost
 }
 ```
 
-原因：trivial encryption 只是把明文变成 FHE 操作兼容的 ciphertext 形式，明文已经在 calldata 或合约状态变化中公开，不提供输入隐私。
+Reason: trivial encryption only converts plaintext into a ciphertext form compatible with FHE operations. The plaintext has already been exposed in calldata or contract state changes, so it does not provide input privacy.
 
-## 初始化检查
+## Initialization Checks
 
-状态变量默认是 zero handle。需要区分“未初始化”和“明文值为 0”时，使用：
+State variables default to the zero handle. When you need to distinguish "uninitialized" from "plaintext value is 0", use:
 
 ```solidity
 if (!FHE.isInitialized(_count)) {
@@ -119,12 +119,12 @@ if (!FHE.isInitialized(_count)) {
 }
 ```
 
-不要把 `euintXX.unwrap(value) == 0` 写进业务代码；优先使用 `FHE.isInitialized`。
+Do not write `euintXX.unwrap(value) == 0` in business logic. Prefer `FHE.isInitialized`.
 
-## 常见错误
+## Common Mistakes
 
-- 加密时绑定了 contract A，调用时传给 contract B。
-- 加密时绑定了 alice，交易由 bob 发出。
-- 合约参数写成 `bytes32`，跳过了 `FHE.fromExternal`。
-- 状态更新后忘记 `FHE.allowThis`。
-- 使用 `FHE.asEuintXX(userInput)` 接收本应保密的用户输入。
+- Encrypting for contract A but passing the input to contract B.
+- Encrypting for Alice but sending the transaction from Bob.
+- Declaring the contract parameter as `bytes32` and skipping `FHE.fromExternal`.
+- Forgetting `FHE.allowThis` after updating state.
+- Using `FHE.asEuintXX(userInput)` to receive user input that should remain private.

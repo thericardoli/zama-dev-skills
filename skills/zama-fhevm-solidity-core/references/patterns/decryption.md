@@ -1,32 +1,32 @@
-# 开发模式：解密
+# Development Pattern: Decryption
 
-## 解密方式选择
+## Choosing a Decryption Path
 
-FHEVM 中常见三类读取路径：
+FHEVM commonly has three read paths:
 
-- **不解密**：继续在 encrypted domain 内计算，优先选择。
-- **user decrypt**：只有被授权用户在链下看到明文。
-- **public decrypt**：结果公开，任何人都可以得到明文，必要时链上验证 KMS 签名后继续执行公开业务逻辑。
+- **No decryption**: continue computing in the encrypted domain. Prefer this when possible.
+- **User decrypt**: only authorized users see the plaintext off-chain.
+- **Public decrypt**: the result is public and anyone can obtain the plaintext. If needed, verify KMS signatures on-chain before continuing public business logic.
 
-默认优先 user decrypt。只有结果本来就应该公开时才用 public decrypt。
+Default to user decrypt. Use public decrypt only when the result is meant to be public.
 
 ## User decrypt
 
-user decrypt 适合用户读取自己被授权的 encrypted handle，例如余额、计数器、私人投票状态。
+User decrypt is suitable when users need to read encrypted handles they are authorized for, such as balances, counters, or private voting state.
 
-合约侧要求：
+Contract-side requirements:
 
 ```solidity
 FHE.allowThis(value);
 FHE.allow(value, user);
 ```
 
-两者都重要：
+Both are important:
 
-- `allowThis` 允许 dApp 合约参与 user decrypt 授权路径，也允许后续继续计算。
-- `allow(value, user)` 允许指定用户解密该 handle。
+- `allowThis` lets the dApp contract participate in the user decrypt authorization path and allows later computation.
+- `allow(value, user)` allows the specified user to decrypt the handle.
 
-示例：
+Example:
 
 ```solidity
 function setValue(externalEuint32 input, bytes calldata proof) external {
@@ -41,7 +41,7 @@ function valueHandle() external view returns (euint32) {
 }
 ```
 
-多值 user decrypt 时，对每个 handle 都要授权合约自身和用户：
+For multi-value user decrypt, authorize both the contract itself and the user for every handle:
 
 ```solidity
 FHE.allowThis(_encryptedBool);
@@ -53,33 +53,33 @@ FHE.allow(_encryptedAmount, msg.sender);
 FHE.allow(_encryptedAddress, msg.sender);
 ```
 
-链下 user decrypt 的具体调用方式由前端 SDK、Hardhat 或 Foundry skill 负责。Solidity core 只要求合约正确保存 handle 并授予 ACL。
+The exact off-chain user decrypt call belongs to the frontend SDK, Hardhat, or Foundry skill. Solidity core only requires the contract to store handles correctly and grant ACL permissions.
 
-## User decrypt 的合约设计要点
+## Contract Design Notes for User Decrypt
 
-- getter 返回 encrypted handle，不返回明文。
-- 合约只给业务上有权知道该值的人 `FHE.allow`。
-- 如果 recipient 需要读取收到的余额，transfer 时授权 recipient。
-- 如果 operator 只需要链上临时使用，优先 `allowTransient` 而不是长期 `allow`。
-- 前端要处理 zero/uninitialized handle，避免无意义 decrypt。
+- Getters return encrypted handles, not plaintext.
+- Grant `FHE.allow` only to people who are allowed to know the value according to the business logic.
+- If a recipient needs to read the balance they received, authorize the recipient during transfer.
+- If an operator only needs temporary on-chain use, prefer `allowTransient` over long-lived `allow`.
+- Frontends should handle zero or uninitialized handles to avoid meaningless decrypt requests.
 
 ## Public decrypt
 
-public decrypt 适合所有人都可以知道的结果，例如最终计票、拍卖结束后的获胜价、游戏回合公开结果。
+Public decrypt is suitable for results everyone is allowed to know, such as final vote counts, the winning price after an auction ends, or public game-round results.
 
-合约侧先标记：
+First mark the value on-chain:
 
 ```solidity
 FHE.makePubliclyDecryptable(result);
 ```
 
-典型三步：
+Typical three-step flow:
 
-1. 链上运行 confidential logic，得到 encrypted result。
-2. 链上调用 request 函数，把 result 标记为 publicly decryptable，并 emit handle。
-3. 链下 relayer/SDK 执行 public decrypt；链上 callback/finalize 用 `FHE.checkSignatures` 验证 proof 后写入公开状态。
+1. Run confidential logic on-chain to produce an encrypted result.
+2. Call an on-chain request function that marks the result as publicly decryptable and emits the handle.
+3. The off-chain relayer/SDK performs public decrypt. The on-chain callback/finalize function verifies the proof with `FHE.checkSignatures` and then writes public state.
 
-如果链上消费解密结果，必须验证 KMS 签名：
+If the decrypted result is consumed on-chain, KMS signatures must be verified:
 
 ```solidity
 bytes32[] memory handles = new bytes32[](1);
@@ -88,9 +88,9 @@ handles[0] = FHE.toBytes32(result);
 FHE.checkSignatures(handles, abi.encode(cleartexts), decryptionProof);
 ```
 
-实际合约应把 request id、expected handles、callback caller、是否已消费等状态绑定起来，防止 replay 和错配。
+Production contracts should bind state such as request id, expected handles, callback caller, and whether the result has already been consumed to prevent replay and mismatches.
 
-多值 public decrypt 时，handles 顺序、`abi.encode(...)` 顺序、SDK public decrypt 输入顺序必须完全一致：
+For multi-value public decrypt, the handle order, `abi.encode(...)` order, and SDK public decrypt input order must match exactly:
 
 ```solidity
 bytes32[] memory handles = new bytes32[](2);
@@ -101,9 +101,9 @@ bytes memory encoded = abi.encode(clearFoo, clearBar);
 FHE.checkSignatures(handles, encoded, proof);
 ```
 
-顺序错了，proof 即使来自真实 KMS 也应验证失败。
+If the order is wrong, verification should fail even if the proof came from the real KMS.
 
-## Public decrypt finalize 模板
+## Public Decrypt Finalize Template
 
 ```solidity
 bool private _requested;
@@ -133,25 +133,25 @@ function finalizeWinner(bytes memory clearResult, bytes memory proof) external {
 }
 ```
 
-根据业务继续加入 caller 校验、request id、deadline、expected handle hash 等约束。
+Add caller checks, request ids, deadlines, expected handle hashes, and similar constraints according to the business logic.
 
-## 不需要解密的场景
+## Cases That Do Not Need Decryption
 
-优先在 encrypted domain 内完成业务逻辑：
+Prefer completing business logic inside the encrypted domain:
 
 ```solidity
 ebool canSpend = FHE.ge(balance, amount);
 euint64 next = FHE.select(canSpend, FHE.sub(balance, amount), balance);
 ```
 
-不要为了做 `if` 分支就把隐私值 public decrypt。
+Do not public decrypt a private value just to run an `if` branch.
 
-## 常见错误
+## Common Mistakes
 
-- 忘记 `FHE.allowThis`，导致 user decrypt 失败。
-- 只授权 `msg.sender`，但实际需要 recipient 解密。
-- 对敏感余额或订单调用 `makePubliclyDecryptable`。
-- public decrypt callback 不校验 request id 或 handles。
-- 前端对 zero handle 直接发起 user decrypt。
-- 多值 public decrypt 的 handle 顺序和 ABI 编码顺序不一致。
-- finalize 函数没有 replay protection，重复消费同一 proof。
+- Forgetting `FHE.allowThis`, which causes user decrypt to fail.
+- Authorizing only `msg.sender` when the recipient also needs to decrypt.
+- Calling `makePubliclyDecryptable` on sensitive balances or orders.
+- Not checking request id or handles in a public decrypt callback.
+- Starting user decrypt from the frontend for a zero handle.
+- Using a different handle order and ABI encoding order for multi-value public decrypt.
+- Missing replay protection in finalize functions, allowing the same proof to be consumed repeatedly.

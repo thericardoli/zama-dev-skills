@@ -1,10 +1,10 @@
-# 开发模式：Branching、Loops 与 Error Handling
+# Development Pattern: Branching, Loops, and Error Handling
 
-## 核心限制
+## Core Limitation
 
-encrypted comparison 返回 `ebool`。`ebool` 不能驱动 Solidity 的 `if`、`while`、`require` 或 `revert`，因为那会要求链上知道明文条件。
+Encrypted comparisons return `ebool`. An `ebool` cannot drive Solidity `if`, `while`, `require`, or `revert`, because that would require the chain to know the plaintext condition.
 
-错误写法：
+Incorrect:
 
 ```solidity
 ebool canTransfer = FHE.ge(balance, amount);
@@ -13,12 +13,12 @@ if (canTransfer) {
 }
 ```
 
-正确方向：
+Correct approaches:
 
-- 在 encrypted domain 内用 `FHE.select` 做条件更新。
-- 如果必须进入普通 Solidity 分支，先通过 public decrypt 走异步 finalize。
+- Use `FHE.select` for conditional updates inside the encrypted domain.
+- If ordinary Solidity branching is required, public decrypt first and continue through an asynchronous finalize step.
 
-## FHE.select 条件赋值
+## Conditional Assignment with FHE.select
 
 ```solidity
 ebool isAbove = FHE.lt(highestBid, bid);
@@ -29,11 +29,11 @@ FHE.allowThis(highestBid);
 FHE.allowThis(winningAddress);
 ```
 
-`FHE.select(condition, valueIfTrue, valueIfFalse)` 会生成新的 encrypted handle。即使明文结果等于旧值，也要重新考虑 ACL。
+`FHE.select(condition, valueIfTrue, valueIfFalse)` produces a new encrypted handle. Even if the plaintext result equals the old value, reconsider ACL permissions.
 
-## Fail-closed 业务更新
+## Fail-closed Business Updates
 
-余额不足时不 revert，而是把更新量设为 0：
+Do not revert when the balance is insufficient. Instead, set the moved amount to 0:
 
 ```solidity
 function _transfer(address from, address to, euint64 amount) internal {
@@ -50,11 +50,11 @@ function _transfer(address from, address to, euint64 amount) internal {
 }
 ```
 
-如果用户需要知道失败原因，配合 encrypted error code。
+If users need to know why an operation failed, pair this with an encrypted error code.
 
-## Encrypted error code
+## Encrypted Error Code
 
-encrypted 条件失败不会自动 revert。可以为每个用户记录最近错误：
+Encrypted condition failures do not automatically revert. You can record the latest error per user:
 
 ```solidity
 struct LastError {
@@ -83,20 +83,20 @@ function _setLastError(address user, euint8 code) internal {
 }
 ```
 
-在业务逻辑中：
+In business logic:
 
 ```solidity
 ebool ok = FHE.ge(balance, amount);
 _setLastError(msg.sender, FHE.select(ok, NO_ERROR, NOT_ENOUGH_FUNDS));
 ```
 
-encrypted 常量如果会在后续交易中复用，也需要在初始化时给合约自身持久权限。
+Encrypted constants that will be reused across future transactions also need persistent permission for the contract itself during initialization.
 
-前端监听 `ErrorChanged`，读取 handle 后 user decrypt。
+The frontend listens for `ErrorChanged`, reads the handle, then user decrypts it.
 
-## 固定轮数循环
+## Fixed-count Loops
 
-不能用 encrypted condition break loop：
+Do not use an encrypted condition to break a loop:
 
 ```solidity
 while (FHE.lt(x, maxValue)) {
@@ -104,7 +104,7 @@ while (FHE.lt(x, maxValue)) {
 }
 ```
 
-改成公开上界的固定轮数循环：
+Use a fixed-count loop with a public upper bound:
 
 ```solidity
 for (uint256 i = 0; i < 10; i++) {
@@ -113,11 +113,11 @@ for (uint256 i = 0; i < 10; i++) {
 }
 ```
 
-固定轮数上界必须可接受 gas/HCU 成本。若上界很大，重新设计产品逻辑。
+The fixed iteration bound must have acceptable gas/HCU cost. If the bound is large, redesign the product logic.
 
-## 避免 encrypted index
+## Avoid Encrypted Indexes
 
-用 encrypted index 从数组中选择元素通常很贵，因为为了隐藏 index，需要遍历所有元素并用 `FHE.select` 聚合：
+Selecting an array element by encrypted index is usually expensive. To hide the index, you must iterate over all elements and aggregate with `FHE.select`:
 
 ```solidity
 euint32 selected = FHE.asEuint32(0);
@@ -127,16 +127,16 @@ for (uint256 i = 0; i < items.length; i++) {
 }
 ```
 
-除非数组很小，否则避免这种模式。
+Avoid this pattern unless the array is very small.
 
-## 异步公开分支
+## Asynchronous Public Branching
 
-如果普通 Solidity 逻辑必须依赖 encrypted result，例如“赢家领取 NFT”，流程应拆成：
+If ordinary Solidity logic must depend on an encrypted result, such as "the winner claims an NFT", split the flow:
 
-1. encrypted 逻辑计算 `winningAddress`。
-2. auction end 后 `makePubliclyDecryptable(winningAddress)` 并 emit request。
-3. off-chain public decrypt。
-4. `finalize` 验证 proof，写入公开 `winnerAddress`。
-5. 后续普通 `require(msg.sender == winnerAddress)` 分支。
+1. Encrypted logic computes `winningAddress`.
+2. After the auction ends, call `makePubliclyDecryptable(winningAddress)` and emit a request.
+3. Off-chain public decrypt runs.
+4. `finalize` verifies the proof and writes public `winnerAddress`.
+5. Later ordinary `require(msg.sender == winnerAddress)` branches can run.
 
-这就是 sealed-bid auction 类应用的基本结构。
+This is the basic structure for sealed-bid auction applications.

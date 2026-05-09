@@ -1,19 +1,19 @@
-# 开发模式：ACL 权限控制
+# Development Pattern: ACL Permission Control
 
-## ACL 的基本问题
+## Core ACL Problem
 
-FHEVM 中 encrypted handle 不是谁拿到 `bytes32` 都能使用。ACL 控制：
+In FHEVM, receiving the `bytes32` for an encrypted handle is not enough to use it. ACL controls:
 
-- 哪个合约能继续计算某个 handle
-- 哪个用户能 user decrypt 某个 handle
-- 某个 handle 是否可以 public decrypt
-- 某个临时调用路径是否能使用 handle
+- which contracts can continue computing over a handle
+- which users can user decrypt a handle
+- whether a handle can be public decrypted
+- whether a temporary call path can use a handle
 
-没有 ACL 权限时，即使合约持有 handle，也不能在未来交易中继续操作它。因此每次生成新 ciphertext 后，都要重新思考权限传播。
+Without ACL permissions, a contract cannot continue operating on a handle in future transactions even if it stores the handle. Therefore, every newly generated ciphertext requires a fresh decision about permission propagation.
 
-## 基本授权组合
+## Basic Authorization Combination
 
-保存状态后通常至少：
+After saving state, usually grant at least:
 
 ```solidity
 _balance[user] = nextBalance;
@@ -21,21 +21,21 @@ FHE.allowThis(nextBalance);
 FHE.allow(nextBalance, user);
 ```
 
-如果返回值只在同一笔交易里传给另一个合约，可用 transient：
+If a return value is only passed to another contract within the same transaction, use transient authorization:
 
 ```solidity
 FHE.allowTransient(value, target);
 ```
 
-如果结果要公开：
+If the result should be public:
 
 ```solidity
 FHE.makePubliclyDecryptable(result);
 ```
 
-## 链式语法
+## Chained Syntax
 
-如果项目启用 `using FHE for *;`，可以使用链式授权：
+If the project enables `using FHE for *;`, chained authorization is available:
 
 ```solidity
 using FHE for *;
@@ -44,9 +44,9 @@ _value = FHE.add(_value, amount);
 _value.allowThis().allow(msg.sender);
 ```
 
-链式写法只是语法糖。团队风格不统一时，优先使用显式 `FHE.allow...`，降低误读风险。
+Chaining is only syntax sugar. When team style is inconsistent, prefer explicit `FHE.allow...` calls to reduce misreads.
 
-## 多用户转账模式
+## Multi-user Transfer Pattern
 
 ```solidity
 function transfer(address to, externalEuint64 encryptedAmount, bytes calldata proof) external {
@@ -69,11 +69,11 @@ function transfer(address to, externalEuint64 encryptedAmount, bytes calldata pr
 }
 ```
 
-注意：如果 sender 也需要知道 recipient 更新是否成功，需要额外授权或设计事件/公开状态。
+Note: if the sender also needs to know whether the recipient update succeeded, add authorization or design an event/public state path.
 
-## 输入 handle 的 sender 授权检查
+## Sender Authorization Checks for Input Handles
 
-如果函数接收的 encrypted handle 不是本次 `FHE.fromExternal` 产生，而是来自现有状态或其他合约传入，应检查调用者是否有权使用该 handle：
+If a function receives an encrypted handle that was not produced by `FHE.fromExternal` in the same call, but instead came from existing state or another contract, check whether the caller is allowed to use that handle:
 
 ```solidity
 function consumeExisting(euint64 amount) external {
@@ -84,9 +84,9 @@ function consumeExisting(euint64 amount) external {
 }
 ```
 
-这类检查可以减少通过观察交易成功/失败推断他人隐私状态的攻击面。
+These checks can reduce the attack surface where transaction success or failure leaks information about someone else's private state.
 
-## 检查权限
+## Checking Permissions
 
 ```solidity
 if (!FHE.isSenderAllowed(value)) {
@@ -96,38 +96,38 @@ if (!FHE.isSenderAllowed(value)) {
 bool aliceAllowed = FHE.isAllowed(value, alice);
 ```
 
-`isSenderAllowed` 适合保护“调用者必须已经有权使用这个 handle”的函数。
+`isSenderAllowed` is useful for functions where the caller must already be authorized to use the handle.
 
-## Cross-contract transient 授权
+## Cross-contract Transient Authorization
 
-把 encrypted value 传给另一个合约本次调用使用时：
+When passing an encrypted value to another contract for use in the current call:
 
 ```solidity
 FHE.allowTransient(amount, address(token));
 token.confidentialTransferFrom(msg.sender, address(this), amount);
 ```
 
-常见于 ERC7984、auction、AMM、vesting、wrapper 等组合合约。不要给外部合约永久权限，除非它确实需要跨交易使用该 handle。
+This is common in composed contracts such as ERC7984 integrations, auctions, AMMs, vesting, and wrappers. Do not grant an external contract permanent permission unless it truly needs to use the handle across transactions.
 
-## 权限传播策略
+## Permission Propagation Strategy
 
-设计每个状态变量时回答：
+When designing each state variable, answer:
 
-- 谁需要继续参与链上计算？
-- 谁需要 user decrypt？
-- 是否允许 public decrypt？
-- recipient、spender、delegate、operator 是否需要权限？
-- 旧 handle 权限是否可以接受？
+- Who needs to continue participating in on-chain computation?
+- Who needs user decrypt?
+- Is public decrypt allowed?
+- Do recipients, spenders, delegates, or operators need permissions?
+- Are permissions on old handles acceptable?
 
-## 高价值 secret 和 reorg
+## High-value Secrets and Reorgs
 
-如果某个 handle 一旦授权给错误用户会造成不可逆高价值损失，例如私钥、密钥材料、重大拍卖结果，应使用两阶段授权：先记录购买或资格状态，等待足够区块确认后再调用 `FHE.allow`。详见 `reorgs.md`。
+If authorizing a handle to the wrong user would cause irreversible high-value loss, such as leaking private keys, key material, or major auction results, use two-phase authorization: first record purchase or eligibility state, then wait for enough block confirmations before calling `FHE.allow`. See `reorgs.md`.
 
-## 常见错误
+## Common Mistakes
 
-- 更新状态后只 `allow(user)`，忘记 `allowThis`。
-- 给了 owner 全局 decrypt 权限，但产品并不允许 owner 看用户隐私值。
-- transfer 后 recipient 无法 decrypt 自己余额。
-- public decrypt 被当作“方便调试”留在生产代码。
-- 把 transient authorization 用作长期权限。
-- 外部合约调用前忘记 `allowTransient`，导致 ERC7984 或组合合约内部操作失败。
+- Calling only `allow(user)` after updating state and forgetting `allowThis`.
+- Giving the owner global decrypt permission when the product does not allow the owner to see user-private values.
+- Leaving the recipient unable to decrypt their own balance after a transfer.
+- Leaving public decrypt in production code as a debugging convenience.
+- Using transient authorization as long-term permission.
+- Forgetting `allowTransient` before an external contract call, causing ERC7984 or composed-contract internals to fail.

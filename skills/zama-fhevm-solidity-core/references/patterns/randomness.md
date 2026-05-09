@@ -1,15 +1,15 @@
-# 开发模式：Encrypted Randomness
+# Development Pattern: Encrypted Randomness
 
-## 适用场景
+## When to Use
 
-使用 `FHE.randE*` 生成链上 encrypted random value，适合：
+Use `FHE.randE*` to generate on-chain encrypted random values. Suitable use cases include:
 
-- 隐私游戏随机状态
-- 抽签或匹配
-- sealed game round
-- 需要先保密、后续 user/public decrypt 的随机结果
+- private random game state
+- lotteries or matching
+- sealed game rounds
+- random results that must remain private first and later be user/public decrypted
 
-## 基本用法
+## Basic Usage
 
 ```solidity
 ebool coin = FHE.randEbool();
@@ -17,7 +17,7 @@ euint8 die = FHE.randEuint8(8);
 euint16 number = FHE.randEuint16();
 ```
 
-常用函数：
+Common functions:
 
 - `FHE.randEbool()`
 - `FHE.randEuint8()` / `FHE.randEuint8(upperBound)`
@@ -27,9 +27,9 @@ euint16 number = FHE.randEuint16();
 - `FHE.randEuint128()` / `FHE.randEuint128(upperBound)`
 - `FHE.randEuint256()` / `FHE.randEuint256(upperBound)`
 
-## 交易限制
+## Transaction Constraint
 
-随机数生成需要更新链上 PRNG 状态，必须在 transaction 中执行，不能依赖 `eth_call`。
+Random generation needs to update on-chain PRNG state, so it must execute in a transaction and cannot rely on `eth_call`.
 
 ```solidity
 function roll() external {
@@ -40,21 +40,21 @@ function roll() external {
 }
 ```
 
-不要把随机函数放在只读 `view` getter 里。
+Do not put random functions in read-only `view` getters.
 
-## Bounded random
+## Bounded Random
 
-bounded random 的 upper bound 应为 2 的幂，结果范围是 `[0, upperBound - 1]`：
+The upper bound for bounded randomness should be a power of two, and the result range is `[0, upperBound - 1]`:
 
 ```solidity
 euint8 r = FHE.randEuint8(32); // 0..31
 ```
 
-如果业务需要 1..6 的骰子，不要直接用 `upperBound = 6`。可用 8 作为上界，再设计 rejection/映射逻辑；但 rejection 不能泄露或基于 encrypted condition break loop。更简单做法是接受 0..7 并把游戏规则定义为 8 面骰。
+If the product needs a 1..6 die, do not directly use `upperBound = 6`. You can use 8 as the bound and design rejection/mapping logic, but rejection must not leak or break a loop based on an encrypted condition. The simpler approach is to accept 0..7 and define the game as using an eight-sided die.
 
 ## ACL
 
-随机值也是新 handle，必须授权：
+Random values are new handles and must be authorized:
 
 ```solidity
 _secret = FHE.randEuint32();
@@ -62,23 +62,23 @@ FHE.allowThis(_secret);
 FHE.allow(_secret, msg.sender);
 ```
 
-如果未来公开揭示：
+If the value will be revealed publicly later:
 
 ```solidity
 FHE.makePubliclyDecryptable(_secret);
 ```
 
-## Commit/reveal 类游戏
+## Commit/Reveal-style Games
 
-常见结构：
+Common structure:
 
-1. transaction 中生成 encrypted random。
-2. 用 `FHE.select` 或比较完成 encrypted game logic。
-3. 保存 encrypted result 并授权合约。
-4. 到结算阶段 public decrypt 必要结果，验证 proof 后执行公开奖励。
+1. Generate encrypted randomness in a transaction.
+2. Complete encrypted game logic with `FHE.select` or comparisons.
+3. Save the encrypted result and authorize the contract.
+4. At settlement, public decrypt the required result, verify the proof, and execute the public reward.
 
-## 安全和成本
+## Security and Cost
 
-- 每次 random 都消耗 gas/HCU。
-- 不要在循环里大量生成 random，除非成本可接受。
-- 不要在同一函数里生成 random 后立即 public decrypt 期望同步得到结果；public decrypt 是异步流程。
+- Every random call consumes gas/HCU.
+- Do not generate large amounts of randomness inside loops unless the cost is acceptable.
+- Do not generate randomness and then immediately public decrypt it in the same function expecting a synchronous result. Public decrypt is asynchronous.

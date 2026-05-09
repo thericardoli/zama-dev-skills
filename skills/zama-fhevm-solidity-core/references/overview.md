@@ -1,60 +1,60 @@
-# Zama Protocol 与 fhevm-solidity 概览
+# Zama Protocol and fhevm-solidity Overview
 
-## Zama Protocol 是什么
+## What Zama Protocol Is
 
-Zama Protocol 是把 Fully Homomorphic Encryption（FHE，全同态加密）接入 EVM 智能合约的协议栈。它允许合约在不解密用户数据的情况下，对加密状态执行计算，例如加密余额、加密投票、加密出价、加密游戏状态和隐私业务规则。
+Zama Protocol is a protocol stack that brings Fully Homomorphic Encryption (FHE) to EVM smart contracts. It allows contracts to compute over encrypted state without decrypting user data, such as encrypted balances, encrypted votes, encrypted bids, encrypted game state, and private business rules.
 
-在普通 EVM 中，合约状态和 calldata 默认公开；即使前端对数据做了加密，合约也无法直接对密文做有意义的算术和比较。FHEVM 的目标是让 Solidity 合约可以把 encrypted handles 当作一等值，通过 Zama 的 coprocessor、ACL 和 KMS/relayer 体系完成密文计算、权限控制和受控解密。
+In a normal EVM, contract state and calldata are public by default. Even if a frontend encrypts data, the contract cannot directly perform meaningful arithmetic or comparisons over ciphertexts. FHEVM's goal is to let Solidity contracts treat encrypted handles as first-class values and use Zama's coprocessor, ACL, and KMS/relayer systems for encrypted computation, permission control, and controlled decryption.
 
-## fhevm-solidity 解决什么问题
+## What fhevm-solidity Solves
 
-`@fhevm/solidity` 是合约开发者直接使用的 Solidity 库。它主要解决：
+`@fhevm/solidity` is the Solidity library contract developers use directly. It mainly provides:
 
-- **类型封装**：提供 `ebool`、`euintXX`、`eaddress`、`externalEuintXX` 等 encrypted 类型。
-- **输入验证**：通过 `FHE.fromExternal(input, proof)` 把外部传入的 encrypted input 转成合约内部可计算值。
-- **密文计算**：提供 `FHE.add`、`FHE.sub`、`FHE.gt`、`FHE.select` 等 API。
-- **权限控制**：通过 `FHE.allowThis`、`FHE.allow`、`FHE.allowTransient`、`FHE.makePubliclyDecryptable` 管理 handle 的使用和解密权限。
-- **解密验证**：提供 public decrypt 签名验证、user decrypt 授权、delegation 等能力。
-- **网络配置**：通过 `ZamaEthereumConfig` 把合约连接到当前 chain 对应的 FHEVM host contracts。
+- **Type wrappers**: encrypted types such as `ebool`, `euintXX`, `eaddress`, and `externalEuintXX`.
+- **Input verification**: converts externally submitted encrypted inputs into contract-internal computable values with `FHE.fromExternal(input, proof)`.
+- **Encrypted computation**: APIs such as `FHE.add`, `FHE.sub`, `FHE.gt`, and `FHE.select`.
+- **Permission control**: manages handle usage and decryption permissions with `FHE.allowThis`, `FHE.allow`, `FHE.allowTransient`, and `FHE.makePubliclyDecryptable`.
+- **Decryption verification**: public decrypt signature verification, user decrypt authorization, delegation, and related features.
+- **Network configuration**: connects contracts to the FHEVM host contracts for the current chain through `ZamaEthereumConfig`.
 
-## 基本架构
+## Basic Architecture
 
-一个典型 FHEVM dApp 包含：
+A typical FHEVM dApp includes:
 
-- Solidity 合约：使用 `@fhevm/solidity` 定义 encrypted 状态和业务逻辑。
-- FHEVM host contracts：ACL、coprocessor/executor、KMS verifier 等协议合约。
-- Relayer / SDK：前端或脚本用来生成 encrypted input、发起 decrypt、处理签名和证明。
-- 开发框架：Hardhat plugin 或 forge-fhevm 提供 mock、cleartext、本地测试和部署辅助。
+- Solidity contracts: define encrypted state and business logic with `@fhevm/solidity`.
+- FHEVM host contracts: protocol contracts such as ACL, coprocessor/executor, and KMS verifier contracts.
+- Relayer / SDK: used by frontends or scripts to generate encrypted inputs, initiate decrypt flows, and handle signatures and proofs.
+- Development framework: the Hardhat plugin or forge-fhevm provides mocks, cleartext helpers, local testing, and deployment support.
 
-## Solidity 合约的基本思路
+## Basic Solidity Contract Flow
 
-合约不直接拿到明文用户输入。典型流程是：
+Contracts do not receive plaintext user inputs directly. A typical flow is:
 
-1. 用户或前端在链下把明文加密成 encrypted input。
-2. 前端把 `externalEuintXX handle` 和 `inputProof` 传给合约。
-3. 合约用 `FHE.fromExternal` 验证输入并得到内部 `euintXX`。
-4. 合约用 `FHE.*` API 在 encrypted domain 中计算。
-5. 合约为新 handle 设置 ACL。
-6. 用户通过 user decrypt 读取被授权的值，或业务在合适时做 public decrypt。
+1. The user or frontend encrypts plaintext into an encrypted input off-chain.
+2. The frontend passes the `externalEuintXX handle` and `inputProof` to the contract.
+3. The contract verifies the input with `FHE.fromExternal` and obtains an internal `euintXX`.
+4. The contract computes in the encrypted domain with `FHE.*` APIs.
+5. The contract sets ACL permissions for new handles.
+6. The user reads authorized values through user decrypt, or the application performs public decrypt when appropriate.
 
-## 官方仓库入口
+## Official Repository Entry Points
 
-需要确认版本、API 或示例时，优先查询这些官方或核心仓库：
+When you need to confirm versions, APIs, or examples, check these official or core repositories first:
 
-- Zama FHEVM monorepo：`https://github.com/zama-ai/fhevm`
-- Solidity library package：`https://www.npmjs.com/package/@fhevm/solidity`
-- Hardhat template：`https://github.com/zama-ai/fhevm-hardhat-template`
-- Hardhat plugin package：`https://www.npmjs.com/package/@fhevm/hardhat-plugin`
-- Foundry testing library：`https://github.com/zama-ai/forge-fhevm`
-- Zama SDK：`https://github.com/zama-ai/sdk`
-- React template：`https://github.com/zama-ai/fhevm-react-template`
-- Mock utilities：`https://github.com/zama-ai/fhevm-mocks`
-- OpenZeppelin confidential contracts：`https://github.com/OpenZeppelin/openzeppelin-confidential-contracts`
-- Zama Protocol docs：`https://docs.zama.org/protocol`
+- Zama FHEVM monorepo: `https://github.com/zama-ai/fhevm`
+- Solidity library package: `https://www.npmjs.com/package/@fhevm/solidity`
+- Hardhat template: `https://github.com/zama-ai/fhevm-hardhat-template`
+- Hardhat plugin package: `https://www.npmjs.com/package/@fhevm/hardhat-plugin`
+- Foundry testing library: `https://github.com/zama-ai/forge-fhevm`
+- Zama SDK: `https://github.com/zama-ai/sdk`
+- React template: `https://github.com/zama-ai/fhevm-react-template`
+- Mock utilities: `https://github.com/zama-ai/fhevm-mocks`
+- OpenZeppelin confidential contracts: `https://github.com/OpenZeppelin/openzeppelin-confidential-contracts`
+- Zama Protocol docs: `https://docs.zama.org/protocol`
 
-## 开发时的版本策略
+## Version Strategy During Development
 
-Zama 生态变化快。写代码前先从当前项目读取实际依赖：
+The Zama ecosystem changes quickly. Before writing code, read the actual dependencies from the current project:
 
 ```bash
 cat package.json
@@ -62,7 +62,7 @@ cat foundry.toml
 cat remappings.txt
 ```
 
-需要确认当前发布版本时再查询 npm 或 GitHub：
+Only query npm or GitHub when you need to confirm current published versions:
 
 ```bash
 npm view @fhevm/solidity version dist-tags --json
@@ -70,4 +70,4 @@ npm view @fhevm/hardhat-plugin version dist-tags --json
 gh repo view zama-ai/fhevm --json latestRelease,updatedAt,url
 ```
 
-不要把某个教程里的旧 import、旧 mock 路径或旧 SDK API 直接迁移到新项目。
+Do not blindly copy old imports, old mock paths, or old SDK APIs from a tutorial into a new project.

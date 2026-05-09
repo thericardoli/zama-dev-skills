@@ -1,12 +1,12 @@
-# 开发模式：Reorg 风险与两阶段 ACL
+# Development Pattern: Reorg Risk and Two-phase ACL
 
-## 问题
+## Problem
 
-ACL 授权事件进入区块后，会被网关/relayer 观察并传播。如果链发生 reorg，某个“已经授权”的交易可能在最终链上不存在，但授权信息可能已经造成敏感信息泄露。
+After an ACL authorization event enters a block, it can be observed and propagated by gateways/relayers. If the chain reorgs, a transaction that was "already authorized" may not exist on the final chain, but the authorization information may already have leaked sensitive data.
 
-大多数普通余额或低价值状态不需要额外处理。但如果 handle 保护的是高价值不可逆 secret，例如私钥、解锁码、密钥材料、重大拍卖秘密，应考虑两阶段授权。
+Most ordinary balances or low-value state do not need extra handling. However, if a handle protects a high-value irreversible secret, such as a private key, unlock code, key material, or major auction secret, consider two-phase authorization.
 
-## 不推荐的单步授权
+## Not Recommended: One-step Authorization
 
 ```solidity
 function buySecret() external payable {
@@ -17,9 +17,9 @@ function buySecret() external payable {
 }
 ```
 
-问题：支付和授权在同一笔交易里完成，一旦短期 reorg 造成状态回滚，secret 可能已经被错误用户解密。
+Problem: payment and authorization complete in the same transaction. If a short-term reorg rolls back state, the secret may already have been decrypted by the wrong user.
 
-## 两阶段授权
+## Two-phase Authorization
 
 ```solidity
 euint256 private secret;
@@ -43,26 +43,26 @@ function requestSecretAccess() external {
 }
 ```
 
-官方文档以 Ethereum worst-case reorg 讨论 95 slots，具体等待区块数应按目标链最终性、资产价值和 UX 取舍决定。
+The official documentation discusses 95 slots using the Ethereum worst-case reorg scenario. Choose the concrete waiting period based on the target chain's finality, asset value, and UX tradeoffs.
 
-## 适用判断
+## When to Use
 
-使用两阶段 ACL，当：
+Use two-phase ACL when:
 
-- secret 一旦泄露无法撤销。
-- secret 价值远大于等待带来的 UX 成本。
-- 授权对象是购买者、赢家或临时获得资格的人。
-- 业务可以接受二次交易。
+- the secret cannot be revoked once leaked
+- the secret's value is much higher than the UX cost of waiting
+- the authorized party is a buyer, winner, or temporary eligible user
+- the business can accept a second transaction
 
-不必默认使用，当：
+It does not need to be the default when:
 
-- handle 是普通用户余额，错误授权影响有限或可补救。
-- 用户体验优先且泄露风险低。
-- 已有应用层最终性等待或后端风控。
+- the handle is an ordinary user balance and an incorrect authorization has limited or repairable impact
+- user experience is the priority and leakage risk is low
+- the application already has app-layer finality waiting or backend risk controls
 
-## 测试建议
+## Testing Suggestions
 
-- 购买后立即 `requestSecretAccess` 应 revert。
-- 等待足够区块后 buyer 可以获得 ACL。
-- 非 buyer 不能请求 ACL。
-- 重复请求不应产生错误状态。
+- Calling `requestSecretAccess` immediately after purchase should revert.
+- After enough blocks have passed, the buyer can receive ACL permission.
+- Non-buyers cannot request ACL permission.
+- Repeated requests should not produce invalid state.
