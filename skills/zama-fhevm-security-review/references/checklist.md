@@ -1,103 +1,103 @@
-# FHEVM 安全 Checklist
+# FHEVM Security Checklist
 
-## 0. 基础信息
+## 0. Baseline Information
 
-- 依赖版本：`@fhevm/solidity`、Hardhat/Foundry plugin、`@zama-fhe/sdk`、React SDK、OpenZeppelin contracts。
-- 目标网络：mock/local/Sepolia/mainnet。记录 chain id、ACL/KMS/InputVerifier/Gateway/Relayer 配置来源。
-- 合约是否继承正确网络配置，例如 `ZamaEthereumConfig`；不要把 local/mock host 地址硬编码到 Sepolia。
-- 部署 signer/RPC 是否 fail fast；live network 不允许默认 mnemonic、占位 RPC、空 accounts。
+- Dependency versions: `@fhevm/solidity`, Hardhat/Foundry plugin, `@zama-fhe/sdk`, React SDK, and OpenZeppelin Contracts.
+- Target network: mock/local/Sepolia/mainnet. Record chain id and the source of ACL/KMS/InputVerifier/Gateway/Relayer configuration.
+- Whether contracts inherit the correct network configuration, such as `ZamaEthereumConfig`; do not hardcode local/mock host addresses for Sepolia.
+- Deployment signer/RPC configuration must fail fast; live networks must not use default mnemonics, placeholder RPC URLs, or empty accounts.
 
-## 1. 隐私边界
+## 1. Privacy Boundary
 
-- 哪些值必须始终保密：余额、bid、vote、position、location、secret、private order size。
-- 哪些值业务上允许公开：final result、public tally、unwrap amount、settlement price。
-- 哪些边界天然公开：ERC20 approve/transfer amount、shield amount、withdraw amount、事件 metadata、gas/time。
-- README/UI 是否清楚说明公开边界，避免暗示 shield/unwrap 的金额也保密。
-- 对“泄露后无法撤回”的信息是否有 finality delay 或两阶段授权。
+- Values that must remain private: balances, bids, votes, positions, locations, secrets, and private order sizes.
+- Values that are public by design: final results, public tallies, unwrap amounts, and settlement prices.
+- Naturally public boundary values: ERC20 approve/transfer amounts, shield amounts, withdraw amounts, event metadata, gas, and timing.
+- README/UI copy must explain public boundaries clearly and must not imply that shield/unwrap amounts are private.
+- Information that cannot be undisclosed once leaked should have a finality delay or two-phase authorization.
 
 ## 2. Encrypted Input
 
-- 用户输入是否使用 `externalEbool`、`externalEaddress`、`externalEuintXX` 和 `bytes inputProof`。
-- 每个 untrusted encrypted input 是否调用 `FHE.fromExternal(input, inputProof)`。
-- 是否存在 `euintXX.wrap(bytes32)`、直接 cast、或 `FHE.asEuintXX` 接收用户 calldata 的路径。
-- SDK/测试生成 encrypted input 时，contract address 和 user/caller address 是否与最终 `msg.sender` 一致。
-- 多个 encrypted inputs 若共用同一个 proof，handles index、proof 顺序和参数语义是否一致；若每个 input 单独 proof，是否逐个与对应参数匹配。
-- 第三方 caller 场景是否可重放：timelock、router、relayer、multisig、batcher 是否能被攻击者触发复用同一 tuple。
+- User input should use `externalEbool`, `externalEaddress`, `externalEuintXX`, and `bytes inputProof`.
+- Every untrusted encrypted input should call `FHE.fromExternal(input, inputProof)`.
+- Look for `euintXX.wrap(bytes32)`, direct casts, or `FHE.asEuintXX` paths that accept user calldata.
+- When SDK/tests generate encrypted input, the contract address and user/caller address must match the final `msg.sender` context.
+- If multiple encrypted inputs share one proof, handle indexes, proof order, and parameter meaning must align; if each input has its own proof, each proof must match the corresponding parameter.
+- Check third-party caller replay risk: timelocks, routers, relayers, multisigs, and batchers must not let attackers trigger reused tuples.
 
-## 3. ACL 和 Handle 生命周期
+## 3. ACL And Handle Lifecycle
 
-- 每个 storage handle 更新后，如果合约后续还要继续计算，是否调用 `FHE.allowThis(handle)`。
-- 用户需要 user decrypt 的 handle 是否 `FHE.allow(handle, user)`；recipient/operator/spender 是否按业务授权。
-- 是否存在过度授权 owner/admin/service，导致他们能读取用户机密。
-- 跨合约 helper 只在当前交易需要权限时，是否优先 `FHE.allowTransient`。
-- 使用持久 `FHE.allow` 给 helper/router/executor 时，是否能解释长期访问是否安全。
-- 接收外部 handle 的 helper 是否调用 `FHE.isSenderAllowed(handle)` 或等价检查。
-- 旧 handle 被替换后，旧权限是否仍可能泄露历史敏感值；业务是否接受历史可读性。
-- 是否暴露任意 `execute(target,data)`，使持有权限的合约能调用 ACL 或把 handle 权限转出。
+- After every storage handle update, call `FHE.allowThis(handle)` if the contract will need to compute with it in future transactions.
+- If a user needs user-decryption access to a handle, grant `FHE.allow(handle, user)`; verify recipient/operator/spender grants match the business logic.
+- Check for over-authorization of owners/admins/services that would let them read user secrets.
+- Prefer `FHE.allowTransient` when a helper only needs access during the current transaction.
+- If persistent `FHE.allow` is granted to a helper/router/executor, require a clear explanation for why long-lived access is safe.
+- Helpers that receive external handles must call `FHE.isSenderAllowed(handle)` or an equivalent check.
+- When old handles are replaced, old permissions may still expose historical sensitive values; confirm whether the product accepts that history-readability.
+- Check for arbitrary `execute(target,data)` entry points that let a permissioned contract call ACL or transfer handle permissions.
 
-## 4. 算术、条件和业务不变量
+## 4. Arithmetic, Conditions, And Business Invariants
 
-- `euint` 算术是否有 wrap 风险：`add`、`sub`、`mul`、`shl`、decimal scaling、fee numerator。
-- 是否用 encrypted guard + `FHE.select` 处理上限、余额不足、allowance 不足、overflow fallback。
-- silent failure 是否被上层业务理解：confidential token transfer 可能返回 0/effective amount，auction/order/vault 不能只看 requested amount。
-- `ebool` 是否错误用于 Solidity `if/require` 或暗示同步 revert。
-- 是否用公开变量维护 backing/liability/supply 不变量，并和 confidential accounting 对齐。
-- decimals 是否明确：USDC/cUSDC 通常 6 decimals；若支持任意 decimals，scaling 与 uint64 上限要测试。
-- HCU 是否可能超限；循环、批处理、深层组合是否拆分交易或限制 batch size。
+- Check whether `euint` arithmetic can wrap: `add`, `sub`, `mul`, `shl`, decimal scaling, and fee numerators.
+- Use encrypted guards plus `FHE.select` for caps, insufficient balances, insufficient allowances, and overflow fallbacks.
+- Confirm upper layers understand silent failure: confidential token transfers may return zero/effective amounts, so auctions/orders/vaults must not rely only on requested amounts.
+- Check whether `ebool` is incorrectly used as a Solidity `if`/`require` condition or described as a synchronous revert.
+- If public variables track backing/liability/supply invariants, ensure they align with confidential accounting.
+- Decimals must be explicit: USDC/cUSDC are commonly 6 decimals; if arbitrary decimals are supported, scaling and `uint64` bounds need tests.
+- Check whether HCU limits can be exceeded; loops, batching, and deep compositions should split work across transactions or cap batch size.
 
-## 5. User Decrypt
+## 5. User Decryption
 
-- 合约是否只给应读取者授权；view 函数返回 handle 不等于可解密权限。
-- 若使用 delegated user decrypt，是否明确 delegator、delegate、contractAddress 的边界；delegate 不应被误当成 handle 的 ACL owner。
-- delegation 是否有合理 expiration；永久 delegation、wildcard contractAddress、backend 代解密服务是否有产品级确认和撤销流程。
-- revoke/delegate 是否覆盖同块竞态、过期 delegation、错误 contractAddress、多合约批量 delegation、delegate key 泄露后的恢复路径。
-- 前端是否以当前 account、chain、contractAddress 请求 decrypt；账户或网络切换后是否清理旧结果。
-- session/keypair 是否有 TTL；disconnect/account change 后是否 revoke 或刷新。
-- 是否处理 zero/uninitialized handle；避免把 `0x00` 当成真实余额或继续 decrypt。
-- 是否有未授权用户 decrypt 失败测试。
-- 批量 decrypt 是否考虑 SDK contract address 数量、bit-length 限制和错误状态。
+- Contracts should grant access only to intended readers; a view function returning a handle is not decryption authorization.
+- If delegated user decryption is used, clearly separate delegator, delegate, and contractAddress boundaries; the delegate must not be mistaken for the handle's ACL owner.
+- Delegations should have reasonable expirations; permanent delegation, wildcard contractAddress, and backend decryption services need product-level approval and a revocation process.
+- Revoke/delegate flows should cover same-block races, expired delegations, wrong contractAddress, multi-contract batch delegation, and recovery after delegate key compromise.
+- The frontend should request decryption for the current account, chain, and contractAddress; clear stale results after account or network changes.
+- Sessions/keypairs should have TTLs; disconnect/account changes should revoke or refresh access.
+- Handle zero/uninitialized handles; avoid treating `0x00` as a real balance or continuing to decrypt it.
+- Include tests where unauthorized user decryption fails.
+- Batch decryption should account for SDK contract address limits, bit-length limits, and error states.
 
-## 6. Public Decrypt / Async Finalize
+## 6. Public Decryption / Async Finalization
 
-- `FHE.makePubliclyDecryptable` 是否只用于允许永久公开的数据。
-- 请求是否记录 request id、requester、recipient、handles、expected type/order、deadline/status。
-- `FHE.checkSignatures` 的 handles 数量、顺序、cleartext ABI types 是否与 off-chain `publicDecrypt` 输入一致。
-- finalize/callback 是否先 consume/close request，再转账、mint/burn、外部调用或发放权限。
-- 是否防止 replay：同一 proof 重复 finalize、跨 request 使用、已取消/过期 request 使用。
-- 是否限制或验证 caller/gateway/relayer 假设；如果任何人可 finalize，是否依赖 proof 而不是 caller 信任。
-- 失败路径是否能恢复：false predicate、zero debit、过期、cancel、KMS/relayer liveness failure。
+- Use `FHE.makePubliclyDecryptable` only for data that may be permanently public.
+- Requests should record request id, requester, recipient, handles, expected type/order, deadline, and status.
+- `FHE.checkSignatures` handles count, order, and cleartext ABI types must match the off-chain `publicDecrypt` input.
+- Finalize/callback should consume/close the request before transfers, mint/burn, external calls, or granting permissions.
+- Prevent replay: duplicate proof finalization, cross-request proof reuse, and use after cancellation or expiry.
+- Restrict or verify caller/Gateway/Relayer assumptions; if anyone may finalize, rely on proof and request state rather than caller trust.
+- Failure paths must be recoverable: false predicate, zero debit, expiry, cancellation, and KMS/Relayer liveness failures.
 
-## 7. Reorg、Finality 和 AA
+## 7. Reorgs, Finality, And Account Abstraction
 
-- 关键秘密授权是否需要等待 finality，而不是付款交易同块或短窗口内立刻 `allow`。
-- 买卖机密信息、sealed auction、秘密位置/私钥等场景是否采用 request -> finality delay -> grant decrypt。
-- Account Abstraction/bundler 场景是否可能共享 transient allowance；是否要求 cleanup 或避免 AA 聚合调用。
-- 是否依赖事件顺序或 mempool 观察作安全边界。
+- Sensitive secret grants may need finality before `allow`, rather than happening in the same block or a short window after payment.
+- Sales of confidential information, sealed auctions, secret locations, private keys, and similar flows should use request -> finality delay -> grant decryption.
+- Account Abstraction/bundler flows may share transient allowances; require cleanup or avoid AA aggregation for sensitive paths.
+- Do not rely on event order or mempool observation as a security boundary.
 
-## 8. SDK、Relayer、Frontend、Service
+## 8. SDK, Relayer, Frontend, And Services
 
-- 前端是否正确加载 Zama SDK/React SDK，chain id、relayer URL、contract address、ABI 来自 canonical artifact。
-- 浏览器是否暴露 private key、mnemonic、deployer key、relayer API key 或 backend signing credentials。
-- Relayer/backend 是否负责 transaction submission、EIP-712 signing、nonce/retry/key management；不要让浏览器长期持有服务密钥。
-- local cleartext/mock config 是否只在 local 使用；Sepolia/mainnet 禁止 cleartext runtime。
-- registry/wrapper discovery 是否验证 result validity；不要硬编码未验证 cToken/wrapper 地址。
-- SDK import 与本地安装版本是否一致；遇到 wagmi adapter mismatch，不要 patch `node_modules`，用已记录 fallback。
-- UI 是否显示 loading/error/pending/finalized；不要在 transaction pending 时展示过期 plaintext。
+- Frontends should load the Zama SDK/React SDK correctly; chain id, Relayer URL, contract address, and ABI should come from canonical artifacts.
+- Browsers must not expose private keys, mnemonics, deployer keys, Relayer API keys, or backend signing credentials.
+- Relayer/backend services should own transaction submission, EIP-712 signing, nonce/retry logic, and key management; browsers should not hold long-lived service secrets.
+- Local cleartext/mock configuration must be local-only; Sepolia/mainnet must not use a cleartext runtime.
+- Registry/wrapper discovery should validate result validity; do not hardcode unverified cToken/wrapper addresses.
+- SDK imports must match the installed local version; when wagmi adapter mismatches occur, use a documented fallback rather than patching `node_modules`.
+- UI should display loading/error/pending/finalized states; do not show stale plaintext while a transaction is pending.
 
-## 9. 测试最低要求
+## 9. Minimum Test Coverage
 
-- Wrong user、wrong contract、wrong proof、wrong handle order。
-- 未授权 decrypt 失败；recipient/operator/admin 权限边界。
-- Overflow/underflow、uint64 上限、decimals mismatch、zero amount/address。
-- Insufficient balance silent failure 和 effective amount。
-- Public decrypt proof 验证、replay、finalize twice、cancel/expired/false predicate。
-- Reorg/finality 高价值授权流程的时间锁测试。
-- HCU/batch size 上限测试。
-- Sepolia/live 配置 fail-fast 测试：缺 RPC/signer 时清楚失败。
+- Wrong user, wrong contract, wrong proof, wrong handle order.
+- Unauthorized decrypt failures; recipient/operator/admin permission boundaries.
+- Overflow/underflow, `uint64` max, decimal mismatch, zero amount/address.
+- Insufficient-balance silent failure and effective amount.
+- Public decryption proof verification, replay, finalize twice, cancel/expired/false predicate.
+- Timelock tests for high-value reorg/finality authorization flows.
+- HCU/batch size limit tests.
+- Sepolia/live configuration fail-fast tests: missing RPC/signer should fail clearly.
 
-## 10. Severity 参考
+## 10. Severity Guide
 
-- Critical：可无权限解密核心秘密、重放 public decrypt 提走资产、任意 executor 转出 ACL、资金 backing 被 admin/attacker 直接盗走。
-- High：silent failure 破坏拍卖/清算/提现核心不变量、overflow 导致系统性少收费或多铸、错误 recipient 授权泄露敏感余额。
-- Medium：生产路径不可用或可 DoS、session/chain 混用导致错误展示、registry/wrapper 可被错误配置、HCU 可被用户轻易打爆。
-- Low：文档误导隐私边界、测试只覆盖 mock happy path、事件或 getter 命名混淆、gas/可维护性问题。
+- Critical: unauthorized decryption of core secrets, replayed public decrypt proof draining assets, arbitrary executor transferring ACL, or direct admin/attacker theft of backing funds.
+- High: silent failure breaking auction/liquidation/withdrawal invariants, overflow causing systemic undercharging or over-minting, or incorrect recipient grants leaking sensitive balances.
+- Medium: production path unusable or DoS-prone, session/chain mixups causing incorrect display, registry/wrapper misconfiguration, or user-triggerable HCU exhaustion.
+- Low: misleading privacy-boundary documentation, tests covering only mock happy paths, confusing events/getters, gas issues, or maintainability concerns.

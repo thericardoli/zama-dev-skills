@@ -1,121 +1,121 @@
 ---
 name: zama-fhevm-security-review
-description: 审计、review、威胁建模或修复 Zama FHEVM confidential contracts 与 SDK/frontend 集成时使用。覆盖 encrypted input proof、ACL/handle 权限、user/public decrypt、async callback replay、silent failure、unchecked encrypted arithmetic、transient allowance、AA/reorg/finality、HCU、ERC7984/wrapper、Relayer SDK、React/wagmi、Node service、部署和测试缺口。
+description: Use for audits, reviews, threat modeling, or fixes involving Zama FHEVM confidential contracts and SDK/frontend integrations. Covers encrypted input proofs, ACL/handle permissions, user/public decryption, async callback replay, silent failures, unchecked encrypted arithmetic, transient allowances, account abstraction/reorg/finality risks, HCU, ERC7984/wrappers, Relayer SDK, React/wagmi, Node services, deployment issues, and testing gaps.
 ---
 
 # Zama FHEVM Security Review
 
-## 适用场景
+## When To Use
 
-当用户要求审计、review、找漏洞、解释风险、补安全测试、修复 confidential contract 或检查前端/SDK 集成时使用本 skill。
+Use this skill when the user asks you to audit, review, find vulnerabilities, explain risks, add security tests, fix confidential contracts, or inspect frontend/SDK integrations.
 
-本 skill 是 FHEVM 专项安全流程，不替代普通 Solidity 审计。发现 reentrancy、access control、admin key、upgrade、ERC20 accounting、oracle、DoS、deployment secret 等传统问题时，也要一并报告。
+This is an FHEVM-specific security workflow. It does not replace a standard Solidity audit. If you find traditional issues such as reentrancy, access control failures, admin-key risk, upgrade risk, ERC20 accounting bugs, oracle issues, DoS, or deployment secrets, report them as well.
 
-## 先读哪个 reference
+## Which Reference To Read First
 
-- 审计完整项目或做 checklist：读 `references/checklist.md`
-- 需要定位 FHEVM 特有漏洞：读 `references/vulnerability-patterns.md`
-- 用户要求正式 review 输出：读 `references/report-template.md`
+- For a full project audit or checklist-driven review: read `references/checklist.md`.
+- For FHEVM-specific vulnerability patterns: read `references/vulnerability-patterns.md`.
+- For a formal review write-up: read `references/report-template.md`.
 
-需要代码/API 细节时组合其它 skills：
+When you need implementation details or API semantics, combine this skill with:
 
-- 合约 API 和 FHE 语义：`zama-fhevm-solidity-core`
-- Hardhat 测试、mock、Sepolia：`zama-hardhat-contract-dev`
-- Foundry/forge-fhevm：`zama-foundry-forge-fhevm`
-- React/Node/Relayer SDK：`zama-sdk`
+- Contract APIs and FHE semantics: `zama-fhevm-solidity-core`.
+- Hardhat tests, mocks, and Sepolia workflows: `zama-hardhat-contract-dev`.
+- Foundry/forge-fhevm workflows: `zama-foundry-forge-fhevm`.
+- React, Node, and Relayer SDK integrations: `zama-sdk`.
 
-## 审计心智模型
+## Audit Mental Model
 
-FHEVM 安全的核心不是“值已经加密所以安全”，而是：
+FHEVM security is not "the value is encrypted, therefore it is safe." The core model is:
 
-1. **Handle 是能力引用**：链上保存的是 ciphertext handle；谁能计算、传递、解密由 ACL 决定。
-2. **合约不能直接分支 encrypted bool**：比较结果是 `ebool`，业务逻辑必须用 `FHE.select` 或异步 decrypt 设计。
-3. **encrypted arithmetic 默认 unchecked**：溢出/下溢不会像 Solidity checked math 一样 revert，通常会 wrap。
-4. **public decrypt 是永久公开语义**：`makePubliclyDecryptable` 后任何人都能请求 cleartext。
-5. **user decrypt 是 ACL + session/signature 流程**：前端能显示不代表合约授权正确；合约授权和 SDK 签名上下文都要检查。
-6. **mock/local 与 Sepolia/mainnet 假设不同**：mock decrypt helper 不能证明生产 ACL、relayer、KMS、Gateway、reorg/finality 路径安全。
+1. **A handle is a capability reference**: the chain stores ciphertext handles; ACLs decide who can compute with, pass, or decrypt them.
+2. **Contracts cannot branch directly on encrypted booleans**: comparison results are `ebool`; business logic must use `FHE.select` or an asynchronous decryption design.
+3. **Encrypted arithmetic is unchecked by default**: overflows and underflows do not revert like Solidity checked math; they generally wrap.
+4. **Public decryption is permanent disclosure semantics**: once `makePubliclyDecryptable` is called, anyone can request the cleartext.
+5. **User decryption is an ACL + session/signature flow**: if the frontend can display a value, that does not prove the contract authorization is correct; review both contract grants and SDK signing context.
+6. **Mock/local assumptions differ from Sepolia/mainnet assumptions**: mock decryption helpers do not prove production ACL, Relayer, KMS, Gateway, or reorg/finality paths are safe.
 
-## Review 流程
+## Review Workflow
 
-1. **确定版本和运行环境**
-   - 记录 `@fhevm/solidity`、Hardhat/Foundry plugin、`@zama-fhe/sdk`/React SDK、OpenZeppelin contracts 版本。
-   - 区分 Hardhat mock、Foundry cleartext/local、Sepolia、mainnet。不要把 mock-only helper 的通过当成真实安全证明。
+1. **Identify versions and execution environment**
+   - Record versions for `@fhevm/solidity`, the Hardhat/Foundry plugin, `@zama-fhe/sdk`/React SDK, and OpenZeppelin Contracts.
+   - Distinguish Hardhat mock, Foundry cleartext/local, Sepolia, and mainnet. Do not treat passing mock-only helpers as a production security proof.
 
-2. **画隐私边界**
-   - 列出应保密的字段、允许公开的字段、边界公开字段（shield/unwrap amount、事件、public decrypt 结果）。
-   - 标出谁应该 user decrypt：owner、recipient、operator、admin、service、任何人。
-   - 标出泄露不可逆的信息，例如 sealed bid、投票、私钥、坐标、清算价格、订单规模。
+2. **Map privacy boundaries**
+   - List values that must remain private, values intended to become public, and boundary-public values such as shield/unwrap amounts, events, and public decryption results.
+   - Identify who should be able to user-decrypt each value: owner, recipient, operator, admin, service, or anyone.
+   - Mark information whose disclosure is irreversible, such as sealed bids, votes, private keys, coordinates, liquidation prices, or order sizes.
 
-3. **追踪每个 handle 生命周期**
-   - 来源：`FHE.fromExternal`、trivial encryption、random、其它合约返回、storage 旧值。
-   - 使用：运算、比较、传给 helper、存储、事件、返回 view。
-   - 权限：`allowThis`、`allow`、`allowTransient`、`makePubliclyDecryptable`、`isSenderAllowed`/`isAllowed`。
-   - 终点：user decrypt、public decrypt、callback/finalize、废弃或覆盖。
+3. **Trace each handle lifecycle**
+   - Sources: `FHE.fromExternal`, trivial encryption, randomness, other contract returns, or old storage values.
+   - Uses: operations, comparisons, helper calls, storage writes, events, or view returns.
+   - Permissions: `allowThis`, `allow`, `allowTransient`, `makePubliclyDecryptable`, `isSenderAllowed`/`isAllowed`.
+   - Sinks: user decryption, public decryption, callbacks/finalization, discard, or overwrite.
 
-4. **检查输入和上下文绑定**
-   - 不可信用户输入必须是 `externalE* + inputProof` 并经 `FHE.fromExternal` 验证。
-   - SDK/测试生成 encrypted input 时，contract address、user/caller address、chain、参数顺序必须和 Solidity 消费一致。
-   - 第三方 caller（timelock、multisig、relayer、router）代用户提交 encrypted tuple 时，必须有额外绑定或中间合约自己验证，不能让任意触发者复用 calldata。
+4. **Check input and context binding**
+   - Untrusted user input must use `externalE* + inputProof` and be verified with `FHE.fromExternal`.
+   - When the SDK/tests generate encrypted input, the contract address, user/caller address, chain, and parameter order must match the Solidity consumer.
+   - If a third-party caller such as a timelock, multisig, relayer, or router submits an encrypted tuple on behalf of a user, there must be additional binding or validation in the intermediary contract. Do not allow arbitrary callers to replay calldata.
 
-5. **检查 ACL 最小授权**
-   - 每个持久 storage handle 更新后，合约后续还要用就必须 `allowThis`。
-   - 只给真正需要 decrypt 或继续计算的一方授权；recipient、spender、operator、callback/helper contract 分别确认。
-   - helper contract 消费传入 handle 前要验证 caller 对 handle 有权，尤其是 fee、router、auction、batcher、executor。
-   - 跨合约临时调用优先 `allowTransient`；持久授权要能解释为什么不会成为长期泄露面。
+5. **Check ACL least privilege**
+   - Whenever a persistent storage handle is updated, call `allowThis` if the contract must use it in later transactions.
+   - Grant access only to parties that truly need to decrypt or continue computing; review recipients, spenders, operators, callback contracts, and helper contracts separately.
+   - Helper contracts must verify that the caller is authorized for handles they consume, especially in fee, router, auction, batcher, and executor flows.
+   - Prefer `allowTransient` for cross-contract access needed only in the current transaction; require a clear justification for persistent grants.
 
-6. **检查算术、silent failure 和业务不变量**
-   - 对每个 `add/sub/mul/div/rem/shl` 评估 wrap 风险。金额、fee、decimals scaling、liability、votes、bid 都要有边界策略。
-   - 余额不足、allowance 不足、bid 未实际转入等路径是否 fail-closed。若底层 confidential token 返回 effective transferred amount，业务必须用 effective amount，而不是用户请求 amount。
-   - 不能把 `ebool` 当普通 `bool`。需要公开执行时，设计 async decrypt、proof 验证和 one-time finalize。
+6. **Check arithmetic, silent failures, and business invariants**
+   - Assess wraparound risk for every `add/sub/mul/div/rem/shl`. Amounts, fees, decimal scaling, liabilities, votes, and bids need explicit bounds strategy.
+   - Balance-insufficient, allowance-insufficient, and bid-not-transferred paths must fail closed. If an underlying confidential token returns an effective transferred amount, the application must use the effective amount rather than the requested amount.
+   - Do not treat `ebool` as a normal `bool`. If public execution is needed, design an async decryption, proof verification, and one-time finalization flow.
 
-7. **检查 public decrypt / async finalize**
-   - `makePubliclyDecryptable` 只用于业务允许公开的数据；一旦公开，不再假设隐私。
-   - `checkSignatures` 的 handles、cleartexts、类型和顺序必须完全一致。
-   - 每个 request 必须有 request id、owner/recipient、handle(s)、deadline/status；finalize 前先 consume/close，再外部调用或转账。
-   - callback/finalize 必须防重放、重复执行、跨 request 混用 proof、过期请求、错误 caller/gateway 假设。
+7. **Check public decryption and async finalization**
+   - Use `makePubliclyDecryptable` only for data that the product explicitly allows to become public; once exposed, do not keep assuming privacy.
+   - `checkSignatures` handles, cleartexts, ABI types, and order must match exactly.
+   - Each request must have a request id, owner/recipient, handle(s), deadline, and status. Consume/close the request before external calls or transfers.
+   - Callback/finalize flows must prevent replay, duplicate execution, cross-request proof reuse, expired requests, and incorrect caller/Gateway assumptions.
 
-8. **检查 reorg、AA 和 transient storage**
-   - 高价值信息解密授权不要和付款/状态更新在同一最终性窗口内完成；需要两步授权和 finality delay。
-   - Account Abstraction bundling 下，多个 user operation 可能共享一次交易的 transient context；不要假设 transient allowance 在 AA 组合场景中天然隔离。
-   - 有 FHEVM-sensitive AA flow 时，检查是否有 cleanup 策略或 wallet/bundler 层约束。
+8. **Check reorgs, account abstraction, and transient storage**
+   - Do not grant decryption access to high-value secrets in the same finality window as payment or state updates; use two-step authorization and a finality delay.
+   - Under Account Abstraction bundling, multiple user operations can share one transaction's transient context; do not assume transient allowances are naturally isolated across AA-composed calls.
+   - For FHEVM-sensitive AA flows, verify cleanup strategy or wallet/bundler-level constraints.
 
-9. **检查 SDK、前端和服务端**
-   - 浏览器不能暴露 private key、relayer API key、server signer、deployer key。
-   - Relayer/API key/transaction signing 后端要做 key management、nonce/retry、typed-data signing 边界；前端只拿公开配置。
-   - user decrypt session TTL、keypair storage、account/chain change、disconnect 后 revoke/refresh、zero handle、stale decrypt result 都要处理。
-   - local cleartext/mock runtime 不得用于 Sepolia/mainnet；chain id、relayer URL、Gateway/ACL/KMS/InputVerifier 配置必须匹配目标网络。
+9. **Check SDK, frontend, and services**
+   - Browsers must not expose private keys, Relayer API keys, server signers, or deployer keys.
+   - Backend Relayer/API key/transaction-signing services need key management, nonce/retry handling, and typed-data signing boundaries; the frontend should receive only public configuration.
+   - User-decryption session TTL, keypair storage, account/chain changes, disconnect handling, revoke/refresh behavior, zero handles, and stale decrypt results must be handled.
+   - Local cleartext/mock runtimes must not be used for Sepolia/mainnet; chain id, Relayer URL, Gateway/ACL/KMS/InputVerifier configuration must match the target network.
 
-10. **检查测试质量**
-    - 必须有 wrong contract/user input proof、unauthorized user decrypt、over-authorized decrypt、ACL recipient/operator、多用户场景。
-    - 必须有 overflow/underflow、insufficient balance silent failure、public decrypt proof order、replay/finalize twice、expired/cancelled request。
-    - Sepolia/mainnet 路径至少有少量真实 SDK/relayer smoke test 或清楚说明外部资源。
+10. **Check test quality**
+    - Require tests for wrong contract/user input proof, unauthorized user decryption, over-authorized decryption, ACL recipient/operator boundaries, and multi-user cases.
+    - Require tests for overflow/underflow, insufficient-balance silent failure, public decryption proof order, replay/finalize-twice, and expired/cancelled requests.
+    - Sepolia/mainnet paths should have at least a small real SDK/Relayer smoke test, or a clear explanation of external-resource limits.
 
-## 输出要求
+## Output Requirements
 
-安全 review 输出 findings 优先，按严重程度排序。每个 finding 包含：
+Security review output should lead with findings, ordered by severity. Each finding should include:
 
-- 文件和行号
-- 风险描述
-- 可利用或误用场景
-- 修复建议
-- 建议测试
+- File and line number.
+- Risk description.
+- Exploit or misuse scenario.
+- Remediation.
+- Suggested tests.
 
-如果没有高危，也要说明剩余风险、信任假设和测试缺口。不要只给“看起来不错”的总结。
+If there are no high-severity issues, still document residual risk, trust assumptions, and testing gaps. Do not provide only a "looks good" summary.
 
-## 需要特别敏感的红旗
+## High-Signal Red Flags
 
-- 用户输入直接 wrap/cast 成 encrypted type，或使用 `FHE.asE*` 接收不可信输入。
-- 存储新 handle 后忘记 `allowThis`，或只在 mock 测试里能跑。
-- 对 helper/router/executor 授予长期 ACL，但 helper 不检查 `isSenderAllowed`。
-- `makePubliclyDecryptable` 用在余额、投票、bid、订单、位置、私钥等应保密数据上。
-- public decrypt finalize 不 consume request，或先转账/外部调用再关 request。
-- 业务状态基于 requested encrypted amount 更新，没有确认 effective transferred/debited amount。
-- encrypted arithmetic 参与 fee、liability、bid、vote power、decimals scaling 但没有 cap/select 策略。
-- `execute(address,bytes)`、batcher、relayer、AA wallet 能从特权上下文任意调用 ACL 或受保护合约。
-- 前端把旧账户/旧 chain 的 decrypt result 继续展示，或浏览器包含 API key/private key。
+- User input is directly wrapped/cast into an encrypted type, or `FHE.asE*` is used for untrusted input.
+- A new storage handle is written without `allowThis`, or the path only works in mock tests.
+- Long-lived ACL access is granted to helpers/routers/executors, but the helper does not check `isSenderAllowed`.
+- `makePubliclyDecryptable` is used on balances, votes, bids, orders, locations, private keys, or other data that should remain private.
+- Public-decrypt finalization does not consume the request, or performs transfers/external calls before closing the request.
+- Business state is updated from the requested encrypted amount without confirming the effective transferred/debited amount.
+- Encrypted arithmetic affects fees, liabilities, bids, vote power, or decimal scaling without a cap/select strategy.
+- `execute(address,bytes)`, batchers, relayers, or AA wallets can make arbitrary calls to ACL or protected contracts from a privileged context.
+- The frontend keeps showing decrypt results from an old account/chain, or browser bundles contain API keys/private keys.
 
-## 调研依据
+## Research Basis
 
-- Zama Protocol docs：Encrypted inputs、ACL、public/user decrypt、supported types、HCU、reorg handling、Relayer SDK。
-- OpenZeppelin：A Developer's Guide to FHEVM Security。
-- OpenZeppelin audits：Zama Confidential Fungible Token、Confidential Vesting/Voting、Confidential Contracts batcher/diff。
+- Zama Protocol docs: encrypted inputs, ACL, public/user decryption, supported types, HCU, reorg handling, and Relayer SDK.
+- OpenZeppelin: A Developer's Guide to FHEVM Security.
+- OpenZeppelin audits: Zama Confidential Fungible Token, Confidential Vesting/Voting, and Confidential Contracts batcher/diff.
