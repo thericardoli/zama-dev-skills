@@ -1,10 +1,10 @@
-# Errors、Events 与可观测性
+# Errors, Events, and Observability
 
-本文件把 `Handle errors`、`Error types`、`Event decoders` 和源码中的 `errors/*`、`events/*` 合在一起。目标是让应用能把失败变成可恢复 UI，而不是只显示一段 raw error。
+This document combines `Handle errors`, `Error types`, `Event decoders`, and the `errors/*` and `events/*` source modules. The goal is to help applications turn failures into recoverable UI states instead of showing only a raw error.
 
-## 错误处理入口
+## Error Handling Entry Points
 
-所有 SDK typed errors 都继承 `ZamaError`，并带有稳定的 `.code` 字符串。
+All typed SDK errors extend `ZamaError` and include a stable `.code` string.
 
 ```ts
 import {
@@ -22,7 +22,7 @@ try {
   }
 
   if (error instanceof EncryptionFailedError) {
-    showError("加密失败，请重试");
+    showError("Encryption failed. Please try again.");
     return;
   }
 
@@ -35,71 +35,71 @@ try {
 }
 ```
 
-`matchZamaError` 适合 UI 层：
+`matchZamaError` fits UI layers well:
 
 ```ts
 const message = matchZamaError(error, {
-  SIGNING_REJECTED: () => "用户取消了钱包签名",
-  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => `私密余额不足：${e.message}`,
-  INSUFFICIENT_ERC20_BALANCE: (e) => `公开 ERC20 余额不足：${e.message}`,
-  BALANCE_CHECK_UNAVAILABLE: () => "需要先授权查看余额，或显式跳过余额检查",
-  RELAYER_REQUEST_FAILED: (e) => `Relayer 请求失败：${e.message}`,
-  _: (e) => (e instanceof Error ? e.message : "未知错误"),
+  SIGNING_REJECTED: () => "The user rejected the wallet signature",
+  INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => `Insufficient confidential balance: ${e.message}`,
+  INSUFFICIENT_ERC20_BALANCE: (e) => `Insufficient public ERC20 balance: ${e.message}`,
+  BALANCE_CHECK_UNAVAILABLE: () => "Authorize balance viewing first, or explicitly skip the balance check",
+  RELAYER_REQUEST_FAILED: (e) => `Relayer request failed: ${e.message}`,
+  _: (e) => (e instanceof Error ? e.message : "Unknown error"),
 });
 ```
 
-## 常见错误码
+## Common Error Codes
 
-| Error class | Code | 常见场景 | 建议处理 |
+| Error class | Code | Common Scenario | Recommended Handling |
 | --- | --- | --- | --- |
-| `SigningRejectedError` | `SIGNING_REJECTED` | 用户拒绝 EIP-712 签名或交易 | 显示重试，不要当作系统错误 |
-| `SigningFailedError` | `SIGNING_FAILED` | 钱包、硬件钱包或 RPC 签名失败 | 提示检查钱包连接 |
-| `EncryptionFailedError` | `ENCRYPTION_FAILED` | FHE encryption worker/WASM 失败 | 检查 worker、CSP、输入类型 |
-| `DecryptionFailedError` | `DECRYPTION_FAILED` | user/public decrypt 失败 | 检查 ACL、handle、pending unshield |
-| `ApprovalFailedError` | `APPROVAL_FAILED` | public ERC20 approval 失败 | 检查 gas、allowance、token 行为 |
-| `TransactionRevertedError` | `TRANSACTION_REVERTED` | 合约写入 revert | 解析 revert reason，刷新链上状态 |
-| `InvalidKeypairError` | `INVALID_KEYPAIR` | relayer 拒绝 keypair | revoke session 后重新授权 |
-| `KeypairExpiredError` | `KEYPAIR_EXPIRED` | `keypairTTL` 到期 | 重新 `allow()` |
-| `NoCiphertextError` | `NO_CIPHERTEXT` | 账户从未有该 token encrypted balance | 显示空状态，不等同于 0 |
-| `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | relayer/proxy 401、403、5xx、网络失败 | 检查 `relayerUrl`、API key、proxy |
-| `ConfigurationError` | `CONFIGURATION` | import path、chain、worker、registry 配置错误 | 检查初始化配置 |
-| `InsufficientConfidentialBalanceError` | `INSUFFICIENT_CONFIDENTIAL_BALANCE` | transfer/unshield 前余额不足 | 显示缺口，阻止提交 |
-| `InsufficientERC20BalanceError` | `INSUFFICIENT_ERC20_BALANCE` | shield 前 public balance 不足 | 引导充值或减少金额 |
-| `BalanceCheckUnavailableError` | `BALANCE_CHECK_UNAVAILABLE` | 没有 cached credentials，SDK 不想突然弹签名 | 提供授权按钮，或显式 `skipBalanceCheck` |
-| `ERC20ReadFailedError` | `ERC20_READ_FAILED` | public ERC20 balance/allowance 读取失败 | 检查 RPC 和 token address |
-| `DelegationSelfNotAllowedError` | `DELEGATION_SELF_NOT_ALLOWED` | delegate 等于当前用户 | 要求换 delegate |
-| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | delegate 等于 contract address | 要求换 delegate |
-| `DelegationExpiryUnchangedError` | `DELEGATION_EXPIRY_UNCHANGED` | 新 expiry 与旧值相同 | 不发交易，提示已是当前设置 |
-| `DelegationNotFoundError` | `DELEGATION_NOT_FOUND` | revoke 不存在的 delegation | 刷新状态 |
-| `DelegationExpiredError` | `DELEGATION_EXPIRED` | delegation 已过期 | 重新授权 |
-| `DelegationCooldownError` | `DELEGATION_COOLDOWN` | 同一区块重复 delegate/revoke | 等下一区块 |
-| `DelegationContractIsSelfError` | `DELEGATION_CONTRACT_IS_SELF` | contract 等于 caller | 修正参数 |
-| `DelegationExpirationTooSoonError` | `DELEGATION_EXPIRATION_TOO_SOON` | expiry 少于 1 小时 | 选择更远 expiry |
-| `DelegationNotPropagatedError` | `DELEGATION_NOT_PROPAGATED` | delegation 已上链但 gateway 未同步 | 等待 1-2 分钟再重试 |
-| `AclPausedError` | `ACL_PAUSED` | ACL contract paused | 停止相关操作，提示服务状态 |
+| `SigningRejectedError` | `SIGNING_REJECTED` | User rejects an EIP-712 signature or transaction | Show retry; do not treat as a system error |
+| `SigningFailedError` | `SIGNING_FAILED` | Wallet, hardware wallet, or RPC signing failure | Ask the user to check wallet connection |
+| `EncryptionFailedError` | `ENCRYPTION_FAILED` | FHE encryption worker/WASM failure | Check workers, CSP, and input types |
+| `DecryptionFailedError` | `DECRYPTION_FAILED` | User/public decrypt failure | Check ACL, handle, and pending unshield state |
+| `ApprovalFailedError` | `APPROVAL_FAILED` | Public ERC20 approval failure | Check gas, allowance, and token behavior |
+| `TransactionRevertedError` | `TRANSACTION_REVERTED` | Contract write reverted | Decode the revert reason and refresh on-chain state |
+| `InvalidKeypairError` | `INVALID_KEYPAIR` | Relayer rejects the keypair | Revoke the session and authorize again |
+| `KeypairExpiredError` | `KEYPAIR_EXPIRED` | `keypairTTL` expired | Run `allow()` again |
+| `NoCiphertextError` | `NO_CIPHERTEXT` | Account has never had an encrypted balance for this token | Show an empty state; not equivalent to 0 |
+| `RelayerRequestFailedError` | `RELAYER_REQUEST_FAILED` | Relayer/proxy 401, 403, 5xx, or network failure | Check `relayerUrl`, API key, and proxy |
+| `ConfigurationError` | `CONFIGURATION` | Import path, chain, worker, or registry configuration error | Check initialization config |
+| `InsufficientConfidentialBalanceError` | `INSUFFICIENT_CONFIDENTIAL_BALANCE` | Insufficient balance before transfer/unshield | Show the shortfall and block submission |
+| `InsufficientERC20BalanceError` | `INSUFFICIENT_ERC20_BALANCE` | Insufficient public balance before shield | Guide top-up or reduce amount |
+| `BalanceCheckUnavailableError` | `BALANCE_CHECK_UNAVAILABLE` | No cached credentials; SDK avoids triggering a surprise signature | Provide an authorization button, or explicitly use `skipBalanceCheck` |
+| `ERC20ReadFailedError` | `ERC20_READ_FAILED` | Failed to read public ERC20 balance/allowance | Check RPC and token address |
+| `DelegationSelfNotAllowedError` | `DELEGATION_SELF_NOT_ALLOWED` | Delegate equals current user | Ask for a different delegate |
+| `DelegationDelegateEqualsContractError` | `DELEGATION_DELEGATE_EQUALS_CONTRACT` | Delegate equals contract address | Ask for a different delegate |
+| `DelegationExpiryUnchangedError` | `DELEGATION_EXPIRY_UNCHANGED` | New expiry equals the existing value | Do not send a transaction; indicate it is already the current setting |
+| `DelegationNotFoundError` | `DELEGATION_NOT_FOUND` | Revoking a nonexistent delegation | Refresh state |
+| `DelegationExpiredError` | `DELEGATION_EXPIRED` | Delegation has expired | Authorize again |
+| `DelegationCooldownError` | `DELEGATION_COOLDOWN` | Repeated delegate/revoke in the same block | Wait for the next block |
+| `DelegationContractIsSelfError` | `DELEGATION_CONTRACT_IS_SELF` | Contract equals caller | Fix parameters |
+| `DelegationExpirationTooSoonError` | `DELEGATION_EXPIRATION_TOO_SOON` | Expiry is less than 1 hour away | Choose a later expiry |
+| `DelegationNotPropagatedError` | `DELEGATION_NOT_PROPAGATED` | Delegation is on-chain but the gateway has not synchronized yet | Wait 1-2 minutes and retry |
+| `AclPausedError` | `ACL_PAUSED` | ACL contract is paused | Stop related actions and show service status |
 
-## No ciphertext 与 zero balance
+## No Ciphertext vs Zero Balance
 
-这是 UI 中最容易混淆的状态。
+This is one of the easiest UI states to confuse.
 
 ```ts
 import { NoCiphertextError } from "@zama-fhe/sdk";
 
 try {
   const balance = await token.balanceOf();
-  renderBalance(balance); // 0n 是有效余额
+  renderBalance(balance); // 0n is a valid balance
 } catch (error) {
   if (error instanceof NoCiphertextError) {
-    renderEmptyState("还没有私密余额，请先 shield");
+    renderEmptyState("No confidential balance yet. Shield first.");
   }
 }
 ```
 
-`NoCiphertextError` 表示链上没有 encrypted balance handle；`0n` 表示 handle 存在且解密结果为 0。
+`NoCiphertextError` means there is no encrypted balance handle on-chain; `0n` means a handle exists and decrypts to 0.
 
-## Relayer / Worker 状态
+## Relayer / Worker Status
 
-`RelayerWeb` 有初始化状态：
+`RelayerWeb` has initialization status:
 
 ```ts
 const relayer = new RelayerWeb({
@@ -113,16 +113,16 @@ const relayer = new RelayerWeb({
 console.log(relayer.status, relayer.initError);
 ```
 
-常见状态：
+Common states:
 
-- `idle`：还没有初始化。
-- `initializing`：正在加载 worker/WASM。
-- `ready`：可用。
-- `error`：初始化失败，读 `initError`。
+- `idle`: not initialized yet.
+- `initializing`: loading worker/WASM.
+- `ready`: available.
+- `error`: initialization failed; read `initError`.
 
-## SDK lifecycle events
+## SDK Lifecycle Events
 
-`ZamaSDK` 支持 `onEvent`，适合调试和 telemetry。事件不会包含 private key 或明文 secret，但仍不要把完整对象无脑发到第三方日志。
+`ZamaSDK` supports `onEvent`, which is useful for debugging and telemetry. Events do not include private keys or plaintext secrets, but still avoid blindly sending full event objects to third-party logs.
 
 ```ts
 const sdk = new ZamaSDK({
@@ -135,11 +135,11 @@ const sdk = new ZamaSDK({
 });
 ```
 
-典型事件包括 encryption start/end/error、transaction submitted/error、delegation submitted、session revoked 等。精确事件枚举以 `node_modules/@zama-fhe/sdk/dist/esm/index.d.ts` 或 `packages/sdk/src/events/sdk-events.ts` 为准。
+Typical events include encryption start/end/error, transaction submitted/error, delegation submitted, session revoked, and similar lifecycle events. The precise event enum is defined in `node_modules/@zama-fhe/sdk/dist/esm/index.d.ts` or `packages/sdk/src/events/sdk-events.ts`.
 
-## Event decoders
+## Event Decoders
 
-SDK 提供 framework-agnostic raw log decoder。它们适用于 viem、ethers 或自定义 provider 返回的 log，只要有 `topics` 和 `data`。
+The SDK provides framework-agnostic raw log decoders. They work with logs returned by viem, ethers, or a custom provider as long as the logs include `topics` and `data`.
 
 ```ts
 import {
@@ -153,7 +153,7 @@ import {
 } from "@zama-fhe/sdk";
 ```
 
-抓取 token 事件：
+Fetch token events:
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -166,7 +166,7 @@ const logs = await publicClient.getLogs({
 const events = decodeOnChainEvents(logs);
 ```
 
-事件对象使用 `eventName` 判别：
+Event objects are discriminated by `eventName`:
 
 ```ts
 for (const event of events) {
@@ -187,14 +187,14 @@ for (const event of events) {
 }
 ```
 
-便利查找：
+Convenience finders:
 
 ```ts
 const wrapped = findWrapped(receipt.logs);
 const unwrap = findUnwrapRequested(receipt.logs);
 ```
 
-ACL delegation events 要从 ACL contract 查：
+Query ACL delegation events from the ACL contract:
 
 ```ts
 const logs = await publicClient.getLogs({
@@ -207,9 +207,9 @@ const logs = await publicClient.getLogs({
 const aclEvents = decodeAclEvents(logs);
 ```
 
-## Activity feed helpers
+## Activity Feed Helpers
 
-Activity feed 是 event decoders 上的一层：
+Activity feeds are a layer over event decoders:
 
 ```ts
 import {
@@ -227,18 +227,18 @@ const decrypted = await sdk.userDecrypt(
 const feed = sortByBlockNumber(applyDecryptedValues(items, decrypted));
 ```
 
-`extractEncryptedHandles` 会跳过 zero handles 并去重。`applyDecryptedValues` 要求 decrypted value 是 `bigint`，因为 activity amount 是 token amount。
+`extractEncryptedHandles` skips zero handles and de-duplicates. `applyDecryptedValues` expects decrypted values to be `bigint`, because activity amounts are token amounts.
 
-## 排障策略
+## Troubleshooting Strategy
 
-优先按层排：
+Debug by layer:
 
-1. import path 是否正确。
-2. chain id、transport preset、contract address 是否匹配。
-3. relayer proxy 是否返回 401/403/5xx。
-4. worker/WASM/CSP 是否阻止初始化。
-5. wallet 是否支持 EIP-712 signing。
-6. ACL 是否允许当前 user/delegate decrypt。
-7. session/keypair TTL 是否过期。
-8. handle 与 `contractAddress` 是否来自同一个合约。
-9. token flow 是否把 public ERC20 allowance、confidential operator approval、delegated decrypt 混在一起。
+1. Is the import path correct?
+2. Do chain id, transport preset, and contract address match?
+3. Does the relayer proxy return 401/403/5xx?
+4. Are worker/WASM/CSP settings blocking initialization?
+5. Does the wallet support EIP-712 signing?
+6. Does the ACL allow the current user/delegate to decrypt?
+7. Has the session/keypair TTL expired?
+8. Do the handle and `contractAddress` come from the same contract?
+9. Has the token flow mixed up public ERC20 allowance, confidential operator approval, and delegated decrypt?

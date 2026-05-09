@@ -1,21 +1,21 @@
-# React、Wagmi 和 Next.js
+# React, Wagmi, and Next.js
 
-本文件适用于 React 前端、Next.js app router 项目、wagmi 钱包集成和 SDK hook 组合。官方 React SDK hooks 基于 TanStack Query，并在适用场景下提供自动 cache invalidation 与 cached decryption。
+This document applies to React frontends, Next.js app router projects, wagmi wallet integration, and SDK hook composition. The official React SDK hooks are based on TanStack Query and provide automatic cache invalidation and cached decryption where appropriate.
 
-##  React Reference Map
+## React Reference Map
 
-| 页面 | 用途 |
+| Page | Purpose |
 | --- | --- |
-| `ZamaProvider` | 必需 context provider，用于连接 relayer、signer 和 storage |
-| `useConfidentialBalance` | 解密并展示 token balance |
-| `useShield` | 把公开 ERC20 转为 confidential form |
-| `useConfidentialTransfer` | 发送 encrypted token amount |
-| `useUnshield` | 把 confidential token 提回公开 ERC20 |
-| Query keys | 手动 invalidation 和自定义 query composition |
+| `ZamaProvider` | Required context provider that connects relayer, signer, and storage |
+| `useConfidentialBalance` | Decrypt and display token balances |
+| `useShield` | Convert public ERC20 into confidential form |
+| `useConfidentialTransfer` | Send an encrypted token amount |
+| `useUnshield` | Convert confidential tokens back to public ERC20 |
+| Query keys | Manual invalidation and custom query composition |
 
-## Provider 栈
+## Provider Stack
 
-`ZamaProvider` 必须嵌套在 `QueryClientProvider` 之下。wagmi 项目示例：
+`ZamaProvider` must be nested under `QueryClientProvider`. Example for a wagmi project:
 
 ```tsx
 "use client";
@@ -56,7 +56,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-对 Vite + React + TypeScript，不要漏掉 React 类型包和 Vite React 插件。一个可用的最小依赖组：
+For Vite + React + TypeScript, do not forget the React type packages and the Vite React plugin. A usable minimal dependency set:
 
 ```json
 {
@@ -80,30 +80,30 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-版本号是启动点，不是永久真理。新项目要先用 `pnpm view` 查询当前真实版本；如果升级到新的 wagmi/viem 组合，必须跑一次 production build，因为 adapter 兼容问题常在 bundle 阶段暴露。
+Version numbers are a starting point, not permanent truth. For a new project, first query the current real versions with `pnpm view`; if you upgrade to a new wagmi/viem combination, run a production build because adapter compatibility issues often surface during bundling.
 
-## Provider 参数
+## Provider Props
 
-| Prop | 含义 |
+| Prop | Meaning |
 | --- | --- |
-| `relayer` | `RelayerWeb`、`RelayerNode` 或 `RelayerCleartext` |
-| `signer` | `WagmiSigner`、`ViemSigner`、`EthersSigner` 或 custom signer |
-| `storage` | keypair 和 decrypt cache storage |
-| `sessionStorage` | session signature storage |
-| `keypairTTL` | keypair TTL |
-| `sessionTTL` | session signature TTL |
-| `registryAddresses` | 每条链的 registry override |
-| `registryTTL` | registry cache TTL |
-| `onEvent` | lifecycle event callback |
+| `relayer` | `RelayerWeb`, `RelayerNode`, or `RelayerCleartext` |
+| `signer` | `WagmiSigner`, `ViemSigner`, `EthersSigner`, or custom signer |
+| `storage` | Keypair and decrypt cache storage |
+| `sessionStorage` | Session signature storage |
+| `keypairTTL` | Keypair TTL |
+| `sessionTTL` | Session signature TTL |
+| `registryAddresses` | Registry override per chain |
+| `registryTTL` | Registry cache TTL |
+| `onEvent` | Lifecycle event callback |
 
-组件需要直接访问 SDK 时使用 `useZamaSDK()`：
+Use `useZamaSDK()` when a component needs direct access to the SDK:
 
 ```tsx
 const sdk = useZamaSDK();
 const address = await sdk.signer.getAddress();
 ```
 
-## 自定义合约 Hook Flow
+## Custom Contract Hook Flow
 
 ```tsx
 import {
@@ -166,9 +166,9 @@ function ConfidentialAction() {
 }
 ```
 
-## 授权 Gate
+## Authorization Gate
 
-不要因为组件 render 就触发钱包签名：
+Do not trigger wallet signatures merely because a component rendered:
 
 ```tsx
 const { data: allowed } = useIsAllowed({
@@ -181,7 +181,7 @@ const decrypt = useUserDecrypt(
 );
 ```
 
-提供显式授权动作：
+Provide an explicit authorization action:
 
 ```tsx
 const allow = useAllow();
@@ -191,66 +191,66 @@ async function authorize() {
 }
 ```
 
-## Hook 参考
+## Hook Reference
 
-自定义合约 hooks：
+Custom contract hooks:
 
-| Hook | 用途 |
+| Hook | Purpose |
 | --- | --- |
-| `useZamaSDK` | 从 context 取 SDK |
-| `useEncrypt` | 加密 typed external input |
-| `useAllow` | 创建或刷新 user decrypt authorization |
-| `useIsAllowed` | 检查 cached authorization |
-| `useUserDecrypt` | 解密已授权的 private handles |
-| `usePublicDecrypt` | 请求 public handles 的 public decrypt |
+| `useZamaSDK` | Get the SDK from context |
+| `useEncrypt` | Encrypt typed external input |
+| `useAllow` | Create or refresh user decrypt authorization |
+| `useIsAllowed` | Check cached authorization |
+| `useUserDecrypt` | Decrypt authorized private handles |
+| `usePublicDecrypt` | Request public decrypt for public handles |
 
-Token hooks：
+Token hooks:
 
-| Hook | 用途 |
+| Hook | Purpose |
 | --- | --- |
-| `useToken` | read/write token abstraction |
-| `useReadonlyToken` | read-only token abstraction |
-| `useConfidentialBalance` | 解密单个 balance |
-| `useConfidentialBalances` | 批量解密 balances |
-| `useShield` | public ERC20 转 confidential token |
-| `useConfidentialTransfer` | encrypted transfer |
-| `useConfidentialTransferFrom` | operator transfer |
-| `useConfidentialApprove` | confidential operator approval |
-| `useUnderlyingAllowance` | 检查 underlying ERC20 对 wrapper 的 allowance |
-| `useApproveUnderlying` | 单独执行 underlying ERC20 approval |
-| `useUnshield` | confidential token 转 public ERC20 |
-| `useResumeUnshield` | 恢复 pending unshield |
-| `useMetadata` | 读取 token name、symbol、decimals |
-| `useTotalSupply` | 读取 confidential token total supply |
+| `useToken` | Read/write token abstraction |
+| `useReadonlyToken` | Read-only token abstraction |
+| `useConfidentialBalance` | Decrypt a single balance |
+| `useConfidentialBalances` | Decrypt balances in batch |
+| `useShield` | Convert public ERC20 to confidential token |
+| `useConfidentialTransfer` | Encrypted transfer |
+| `useConfidentialTransferFrom` | Operator transfer |
+| `useConfidentialApprove` | Confidential operator approval |
+| `useUnderlyingAllowance` | Check the underlying ERC20 allowance granted to the wrapper |
+| `useApproveUnderlying` | Execute underlying ERC20 approval separately |
+| `useUnshield` | Convert confidential token to public ERC20 |
+| `useResumeUnshield` | Resume pending unshield |
+| `useMetadata` | Read token name, symbol, and decimals |
+| `useTotalSupply` | Read confidential token total supply |
 
-`useConfidentialBalance` 和 `useConfidentialBalances` 当前发布类型读取当前 signer 的 owner。需要任意 owner 时，用 `sdk.createReadonlyToken(tokenAddress).balanceOf(owner)`，或基于 `@zama-fhe/sdk/query` 自己组合 query。
+The currently published types for `useConfidentialBalance` and `useConfidentialBalances` read the current signer's owner. To read an arbitrary owner, use `sdk.createReadonlyToken(tokenAddress).balanceOf(owner)`, or compose your own query from `@zama-fhe/sdk/query`.
 
-Registry 和 discovery hooks：
+Registry and discovery hooks:
 
-| Hook | 用途 |
+| Hook | Purpose |
 | --- | --- |
-| `useWrappersRegistryAddress` | 当前链 registry |
-| `useListPairs` | 分页读取 public/confidential pairs |
-| `useTokenPairsRegistry` / `useTokenPairsLength` / `useTokenPairsSlice` / `useTokenPair` | 低层 registry pair 读取 |
-| `useConfidentialTokenAddress` | public token 转 confidential token，参数是 `{ tokenAddress }`，返回 `[found, confidentialTokenAddress]` |
-| `useTokenAddress` | confidential token 转 public token，参数是 `{ confidentialTokenAddress }`，返回 `[found, tokenAddress]` |
-| `useIsConfidentialTokenValid` | 验证 registry 返回的 confidential token 是否仍有效 |
-| `useWrapperDiscovery` | 发现 wrapper metadata |
-| `useIsConfidential` / `useIsWrapper` | interface detection |
+| `useWrappersRegistryAddress` | Registry for the current chain |
+| `useListPairs` | Read public/confidential pairs with pagination |
+| `useTokenPairsRegistry` / `useTokenPairsLength` / `useTokenPairsSlice` / `useTokenPair` | Low-level registry pair reads |
+| `useConfidentialTokenAddress` | Public token to confidential token; parameter is `{ tokenAddress }`, returns `[found, confidentialTokenAddress]` |
+| `useTokenAddress` | Confidential token to public token; parameter is `{ confidentialTokenAddress }`, returns `[found, tokenAddress]` |
+| `useIsConfidentialTokenValid` | Validate that the confidential token returned by the registry is still valid |
+| `useWrapperDiscovery` | Discover wrapper metadata |
+| `useIsConfidential` / `useIsWrapper` | Interface detection |
 
-Delegation hooks：
+Delegation hooks:
 
-| Hook | 用途 |
+| Hook | Purpose |
 | --- | --- |
-| `useDelegateDecryption` | 授权 delegated decrypt |
-| `useRevokeDelegation` | 撤销 delegated decrypt |
-| `useDelegationStatus` | 检查 delegation |
-| `useDecryptBalanceAs` | 作为 delegate 解密 |
-| `useBatchDecryptBalancesAs` | 批量 delegate decrypt |
+| `useDelegateDecryption` | Authorize delegated decrypt |
+| `useRevokeDelegation` | Revoke delegated decrypt |
+| `useDelegationStatus` | Check delegation |
+| `useDecryptBalanceAs` | Decrypt as a delegate |
+| `useBatchDecryptBalancesAs` | Batch delegate decrypt |
 
-## UI 状态模型
+## UI State Model
 
-不要把所有状态都压成一个 `loading`。建议拆成：
+Do not collapse all state into one `loading` flag. Prefer splitting it into:
 
 - `isConnecting`
 - `isWrongChain`
@@ -264,28 +264,28 @@ Delegation hooks：
 - `isRefreshing`
 - `lastError`
 
-这样用户能看到明确反馈，也能避免意外签名弹窗。
+This gives users precise feedback and helps avoid unexpected signature prompts.
 
-## Next.js 规则
+## Next.js Rules
 
-- provider setup 放在 `"use client"` 文件。
-- Server component 可以把 addresses、ABIs 和静态 metadata 传给 client component。
-- Client component 负责 wallet connection、SDK hooks、encrypted input 和 decrypt。
-- relayer proxy 或任何私有 credentials 走 server route。
-- 避免在 server code 会使用的共享模块中 import SDK hooks。
+- Put provider setup in a `"use client"` file.
+- Server components can pass addresses, ABIs, and static metadata into client components.
+- Client components handle wallet connection, SDK hooks, encrypted inputs, and decrypt.
+- Relayer proxies and any private credentials go through server routes.
+- Avoid importing SDK hooks in shared modules that server code will use.
 
-## 浏览器 Worker、WASM 和 Headers
+## Browser Worker, WASM, and Headers
 
-Browser 中的 FHE encryption 使用 Web Worker 和 WASM。
+FHE encryption in the browser uses Web Workers and WASM.
 
-如果显式配置 `RelayerWeb({ threads })`，多线程 WASM 需要 `SharedArrayBuffer`，因此页面必须跨源隔离：
+If you explicitly configure `RelayerWeb({ threads })`, multi-threaded WASM needs `SharedArrayBuffer`, so the page must be cross-origin isolated:
 
 ```txt
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Next.js：
+Next.js:
 
 ```js
 const nextConfig = {
@@ -303,7 +303,7 @@ const nextConfig = {
 };
 ```
 
-Vite：
+Vite:
 
 ```ts
 export default defineConfig({
@@ -316,23 +316,23 @@ export default defineConfig({
 });
 ```
 
-没有这些 headers 时，SDK 会尝试回退到单线程路径。结果通常是性能下降，而不是功能必然不可用。
+Without these headers, the SDK attempts to fall back to the single-threaded path. The usual result is lower performance, not necessarily broken functionality.
 
-如果应用配置了严格 CSP，还要允许 worker 和 WASM：
+If the application has a strict CSP, also allow workers and WASM:
 
 ```txt
 Content-Security-Policy: worker-src blob:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://cdn.zama.org https://your-relayer-proxy.example;
 ```
 
-## 错误处理模式
+## Error Handling Pattern
 
-建议先写一个本地 error normalizer：
+Start with a local error normalizer:
 
 ```ts
 function getMessage(error: unknown) {
   if (error instanceof Error) return error.message;
-  return "未知 Zama SDK 错误";
+  return "Unknown Zama SDK error";
 }
 ```
 
-需要更丰富的 UI 时，再读 `api-reference.md`，并在已安装项目中查看 `node_modules/@zama-fhe/react-sdk/dist/index.d.ts`、`node_modules/@zama-fhe/sdk/dist/esm/query/index.d.ts` 和相关 SDK 类型入口。
+When the UI needs richer behavior, read `api-reference.md` and inspect `node_modules/@zama-fhe/react-sdk/dist/index.d.ts`, `node_modules/@zama-fhe/sdk/dist/esm/query/index.d.ts`, and the relevant SDK type entry points in the installed project.

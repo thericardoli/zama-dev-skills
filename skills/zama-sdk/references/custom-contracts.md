@@ -1,22 +1,22 @@
-# 自定义合约
+# Custom Contracts
 
-本文件适用于非 token 的 FHEVM 合约，例如 vault、auction、voting、private counter、matching engine，以及应用自定义 encrypted state。
+This document applies to non-ERC7984-token FHEVM contracts such as vaults, auctions, voting, private counters, matching engines, and application-specific encrypted state.
 
-这类场景称为低层 **Encrypt & decrypt**：token hooks 会自动处理 encrypted token flow，但自定义合约需要显式使用 `useEncrypt`、合约写入和 `useUserDecrypt`。
+These scenarios use the lower-level **Encrypt & decrypt** model: token hooks handle encrypted token flows automatically, while custom contracts must explicitly use `useEncrypt`, contract writes, and `useUserDecrypt`.
 
-## 端到端流程
+## End-to-End Flow
 
-1. 读取当前 signer address 和 chain id。
-2. 用将要消费 input 的合约地址加密明文值。
-3. 把 encrypted handles 和 input proof 转为 hex。
-4. 调用接收 encrypted external input 和 `bytes proof` 的 Solidity 函数。
-5. 如果 UI 需要展示结果，从合约读回 encrypted handle。
-6. 确认 ACL 允许用户或 delegate 解密该 handle。
-7. 私有值使用 `sdk.userDecrypt`，公开 reveal 流程使用 `sdk.publicDecrypt`。
+1. Read the current signer address and chain id.
+2. Encrypt plaintext values with the address of the contract that will consume the input.
+3. Convert encrypted handles and the input proof to hex.
+4. Call the Solidity function that accepts encrypted external input and `bytes proof`.
+5. If the UI needs to show the result, read the encrypted handle back from the contract.
+6. Confirm that the ACL lets the user or delegate decrypt that handle.
+7. Use `sdk.userDecrypt` for private values and `sdk.publicDecrypt` for public reveal flows.
 
-## 要匹配的 Solidity 形态
+## Solidity Shape to Match
 
-典型 Solidity 函数：
+A typical Solidity function:
 
 ```solidity
 function submit(externalEuint64 amount, bytes calldata inputProof) external {
@@ -27,9 +27,9 @@ function submit(externalEuint64 amount, bytes calldata inputProof) external {
 }
 ```
 
-SDK 加密时的 `contractAddress` 必须是这个调用 `FHE.fromExternal` 的合约地址。
+The `contractAddress` used during SDK encryption must be the address of the contract that calls `FHE.fromExternal`.
 
-## 加密输入
+## Encrypt Inputs
 
 ```ts
 import { bytesToHex } from "viem";
@@ -50,11 +50,11 @@ const encryptedFlag = bytesToHex(encrypted.handles[1]!);
 const inputProof = bytesToHex(encrypted.inputProof);
 ```
 
-支持的 value shape：
+Supported value shapes:
 
 | FHE type | JS value |
 | --- | --- |
-| `ebool` | `boolean` 或 `bigint` 0/1 |
+| `ebool` | `boolean` or `bigint` 0/1 |
 | `euint8` | `bigint` |
 | `euint16` | `bigint` |
 | `euint32` | `bigint` |
@@ -63,9 +63,9 @@ const inputProof = bytesToHex(encrypted.inputProof);
 | `euint256` | `bigint` |
 | `eaddress` | `0x...` address |
 
-如果加密结果里 handles 为空，先检查 `contractAddress` 和 `userAddress` 是否是有效地址，并确认钱包已连接后再调用 encrypt。
+If the encryption result has empty handles, first check that `contractAddress` and `userAddress` are valid addresses, and confirm the wallet is connected before calling encrypt.
 
-## 写合约
+## Write the Contract
 
 ```ts
 const txHash = await sdk.signer.writeContract({
@@ -78,11 +78,11 @@ const txHash = await sdk.signer.writeContract({
 await sdk.signer.waitForTransactionReceipt(txHash);
 ```
 
-同一次 `encrypt` 产生的 handles 和 input proof 必须一起使用。不要混用不同 encrypt 调用的 handles 和 proof。
+Handles and the input proof produced by the same `encrypt` call must be used together. Do not mix handles and proofs from different encrypt calls.
 
-## 读取 Handles
+## Read Handles
 
-交易完成后，从合约读取暴露的 handle：
+After the transaction completes, read the exposed handle from the contract:
 
 ```ts
 const handle = (await sdk.signer.readContract({
@@ -93,11 +93,11 @@ const handle = (await sdk.signer.readContract({
 })) as `0x${string}`;
 ```
 
-如果 handle 已经是 `0x...` 字符串，直接保存。只有 `Uint8Array` 才需要 `bytesToHex`。
+If a handle is already a `0x...` string, store it directly. Only `Uint8Array` values need `bytesToHex`.
 
-## 用户解密
+## User Decryption
 
-私有 decrypt 需要合约侧 ACL 和钱包 credentials：
+Private decrypt requires contract-side ACL permission and wallet credentials:
 
 ```ts
 await sdk.allow([contractAddress]);
@@ -109,15 +109,15 @@ const result = await sdk.userDecrypt([
 const clearBalance = result[handle] as bigint;
 ```
 
-规则：
+Rules:
 
-- 每个 handle 都必须包含拥有它的 `contractAddress`
-- `contractAddress` 是拥有 encrypted handle 的合约，不一定是当前发起调用的合约
-- zero handle 可以直接显示为 0，不需要请求 relayer
-- credentials 按 requester、chain、contracts 和 TTL cache
-- account 或 chain 变化后需要重新授权
+- Every handle must include the `contractAddress` that owns it.
+- `contractAddress` is the contract that owns the encrypted handle, which is not necessarily the contract currently being called.
+- Zero handles can be displayed as 0 directly; they do not need a relayer request.
+- Credentials are cached by requester, chain, contracts, and TTL.
+- Authorization must be refreshed after account or chain changes.
 
-React query 模式：
+React query pattern:
 
 ```tsx
 const { mutate: allow, isPending: isAllowing } = useAllow();
@@ -129,11 +129,11 @@ const { data, isPending } = useUserDecrypt(
 );
 ```
 
-当 `isAllowed` 为 false 时，提供显式 authorize 按钮。这样可以避免 decrypt query 在页面渲染时触发钱包弹窗。
+When `isAllowed` is false, provide an explicit authorize button. This prevents the decrypt query from triggering a wallet prompt during page render.
 
-## 一次预授权
+## One-Time Pre-Authorization
 
-常用 app 模式是只在 authorization 已 cache 后渲染 children：
+A common app pattern is to render children only after authorization has been cached:
 
 ```tsx
 function UserDecryptionGate({
@@ -150,17 +150,17 @@ function UserDecryptionGate({
 
   return (
     <button onClick={() => allow(contracts)} disabled={isPending}>
-      {isPending ? "签名中..." : "授权解密"}
+      {isPending ? "Signing..." : "Authorize decryption"}
     </button>
   );
 }
 ```
 
-授权完成后，嵌套的 `useUserDecrypt` 或 `useConfidentialBalance` 可以复用 cached credentials。
+After authorization completes, nested `useUserDecrypt` or `useConfidentialBalance` calls can reuse the cached credentials.
 
-## 多合约 Handles
+## Multi-Contract Handles
 
-`useUserDecrypt` 和 `sdk.userDecrypt` 可以处理来自多个合约的值。SDK 会按 contract address 分组，并对每组发起一次 decrypt 请求：
+`useUserDecrypt` and `sdk.userDecrypt` can process values from multiple contracts. The SDK groups them by contract address and sends one decrypt request per group:
 
 ```tsx
 const handles = [
@@ -175,17 +175,17 @@ const { data } = useUserDecrypt(
 );
 ```
 
-返回数据按 handle 作为 key。
+Returned data is keyed by handle.
 
-上例中的 `allowed` 应来自 `useIsAllowed({ contractAddresses: [tokenA, tokenB] })` 或等价的授权 gate。React SDK 的 `useUserDecrypt` 默认要求调用方显式传 `enabled`，避免页面渲染时直接触发钱包签名。
+In the example above, `allowed` should come from `useIsAllowed({ contractAddresses: [tokenA, tokenB] })` or an equivalent authorization gate. The React SDK's `useUserDecrypt` requires callers to pass `enabled` explicitly by default, preventing page render from triggering a wallet signature immediately.
 
-## 持久化 Cache
+## Persistent Cache
 
-Decrypted values 会被 cache，并按 signer 和 contract 维度隔离。取决于 storage，cache 可以跨页面 reload 保留。revoke flows、钱包断开、account 变化、chain 变化或显式 cache clearing 会清理 cache。
+Decrypted values are cached and isolated by signer and contract. Depending on the storage backend, the cache can survive page reloads. Revoke flows, wallet disconnects, account changes, chain changes, or explicit cache clearing clear the cache.
 
-## 公开解密
+## Public Decryption
 
-public decrypt 只用于合约明确允许公开的值。Solidity 侧通常需要对目标 encrypted value 调用公开解密授权，例如 `FHE.makePubliclyDecryptable(value)`，再由 off-chain relayer/KMS 返回 clear value 和 proof。`allowForDecryption` 是 ACL 合约的底层接口；业务合约中不要写成 `FHE.allowForDecryption(...)`。
+Public decrypt is only for values that the contract explicitly allows to be public. On the Solidity side, the target encrypted value usually needs to be authorized for public decryption, for example with `FHE.makePubliclyDecryptable(value)`, after which the off-chain relayer/KMS returns the clear value and proof. `allowForDecryption` is the low-level ACL contract interface; business contracts should not write this as `FHE.allowForDecryption(...)`.
 
 ```ts
 const {
@@ -195,33 +195,33 @@ const {
 } = await sdk.publicDecrypt([handle]);
 ```
 
-`decryptionProof` 和 `abiEncodedClearValues` 通常传给链上 finalize callback，由合约验证签名。必须精确匹配 callback ABI；不要假设某个 ABI 生成的 proof 能用于另一个 ABI。
+`decryptionProof` and `abiEncodedClearValues` are usually passed to an on-chain finalize callback where the contract verifies the signature. They must precisely match the callback ABI; do not assume a proof generated for one ABI can be used with another ABI.
 
-如果只是让当前用户读取自己的值，不要用 public decrypt；应使用 `sdk.userDecrypt([{ handle, contractAddress }])`，并在合约中通过 ACL 授权该用户。
+If the goal is only to let the current user read their own value, do not use public decrypt. Use `sdk.userDecrypt([{ handle, contractAddress }])` and authorize the user through the contract ACL.
 
-## 委托解密
+## Delegated Decryption
 
-delegated decrypt 允许一个账户授权另一个账户解密特定 handles 或特定合约范围内的值。适合 dashboard、service agent、custodial view 或 delegated portfolio read。
+Delegated decrypt lets one account authorize another account to decrypt specific handles or values within a specific contract scope. It is suitable for dashboards, service agents, custodial views, or delegated portfolio reads.
 
-高层入口包括：
+High-level entry points include:
 
 - `sdk.delegatedCredentials`
 - `relayer.createDelegatedUserDecryptEIP712`
 - `relayer.delegatedUserDecrypt`
 - React delegation hooks
 
-delegation 不是 ERC20 allowance。它有独立的 delegator、delegate、contract、handle、expiry 和 revocation 模型。
+Delegation is not ERC20 allowance. It has its own delegator, delegate, contract, handle, expiry, and revocation model.
 
-## 事件和 Activity Decoding
+## Events and Activity Decoding
 
-SDK 导出 token 与 registry flow 的 event/activity helper。自定义合约优先使用 viem/ethers 的常规 ABI decoding；只有 event format 属于 SDK token 或 activity abstraction 时再使用 SDK decoders。
+The SDK exports event/activity helpers for token and registry flows. For custom contracts, prefer normal viem/ethers ABI decoding; use SDK decoders only when the event format belongs to an SDK token or activity abstraction.
 
-## 常见合约接入错误
+## Common Contract Integration Mistakes
 
-- 用 proxy/router address 加密，但 `FHE.fromExternal` 实际在另一个合约执行
-- decrypt 时把某个合约的 handle 与另一个 `contractAddress` 搭配
-- 写入新 handle 后忘记 `FHE.allowThis`
-- 用户需要解密的值忘记 `FHE.allow(handle, user)`
-- 对已经是 `0x...` 的 handle 再次 `bytesToHex`
-- 对用户私有值使用 `publicDecrypt`
-- 用户尚未连接或授权时自动触发 `userDecrypt`
+- Encrypting with a proxy/router address while `FHE.fromExternal` actually executes in another contract.
+- Pairing a handle from one contract with another `contractAddress` during decryption.
+- Forgetting `FHE.allowThis` after writing a new handle.
+- Forgetting `FHE.allow(handle, user)` for values the user needs to decrypt.
+- Calling `bytesToHex` again on a handle that is already `0x...`.
+- Using `publicDecrypt` for a user-private value.
+- Automatically triggering `userDecrypt` before the user is connected or authorized.

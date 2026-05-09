@@ -1,148 +1,148 @@
-# 入门指南
+# Getting Started
 
-这是为项目接入 Zama SDK 时优先阅读的文档。先理解 SDK 能做什么，再选择包和运行环境，最后按 React、vanilla TypeScript、Node.js 或本地开发给出最小可运行骨架。
+Read this document first when integrating Zama SDK into a project. Understand what the SDK does, choose the packages and runtime environment, then use the minimal React, vanilla TypeScript, Node.js, or local development skeletons below.
 
-## SDK 做什么
+## What the SDK Does
 
-Zama SDK 是 confidential smart contracts 的 TypeScript 应用层。在典型项目里，它负责：
+Zama SDK is the TypeScript application layer for confidential smart contracts. In a typical project, it is responsible for:
 
-- 通过 relayer runtime 获取公开加密材料
-- 在合约调用前加密 external input
-- 为 Solidity 中的 `externalEuintX`、`externalEbool`、`externalEaddress` 生成 encrypted handles 和 input proof
-- 管理由钱包签名授权的 decrypt credentials
-- 解密用户被 ACL 授权读取的 handles
-- 请求 public decrypt 结果和 proof
-- 把 ERC7984 confidential token 的 shield、transfer、unshield、balance 流程封装成高层 API
+- Fetching public encryption material through the relayer runtime
+- Encrypting external input before contract calls
+- Generating encrypted handles and input proofs for Solidity `externalEuintX`, `externalEbool`, and `externalEaddress`
+- Managing decrypt credentials authorized by wallet signatures
+- Decrypting handles that the user is allowed to read through ACLs
+- Requesting public decrypt results and proofs
+- Wrapping ERC7984 confidential token shield, transfer, unshield, and balance flows into high-level APIs
 
-Solidity 合约仍然定义隐私策略。SDK 代码必须匹配合约 ABI、目标地址、ACL 设计和 decrypt 模型。
+The Solidity contract still defines the privacy policy. SDK code must match the contract ABI, target address, ACL design, and decrypt model.
 
-## 官方功能模型
+## Official Feature Model
 
-官方 SDK 文档把主要功能归纳为三类：
+The official SDK documentation groups the main features into three categories:
 
-| 功能 | 含义 |
+| Feature | Meaning |
 | --- | --- |
-| Shield 与 unshield | 把公开 ERC20 token 转换成 encrypted token，或再转回公开 ERC20 |
-| Confidential transfer | 在客户端加密转账金额，再提交链上交易 |
-| React hooks | 基于 TanStack Query 的 hooks，带 cached decryption 和自动 cache invalidation |
+| Shield and unshield | Convert a public ERC20 token into an encrypted token, or convert it back to public ERC20 |
+| Confidential transfer | Encrypt the transfer amount on the client, then submit the on-chain transaction |
+| React hooks | TanStack Query-based hooks with cached decryption and automatic cache invalidation |
 
-ERC7984 token 项目优先使用高层 token API 和 hooks。非 token 合约再读 `custom-contracts.md`，使用低层 encrypt/decrypt 流程。
+ERC7984 token projects should prefer the high-level token APIs and hooks. For non-token contracts, read `custom-contracts.md` and use the lower-level encrypt/decrypt flow.
 
-## 两个包
+## Two Packages
 
-| 包 | 使用场景 |
+| Package | Use Case |
 | --- | --- |
-| `@zama-fhe/sdk` | vanilla TypeScript、Node.js、CLI 脚本或非 React 框架 |
-| `@zama-fhe/react-sdk` | React 应用；包含 provider/hooks，并 re-export 大多数 core SDK 符号 |
+| `@zama-fhe/sdk` | Vanilla TypeScript, Node.js, CLI scripts, or non-React frameworks |
+| `@zama-fhe/react-sdk` | React applications; includes providers/hooks and re-exports most core SDK symbols |
 
-Signer adapter 仍从子路径导入，例如 `@zama-fhe/sdk/viem`、`@zama-fhe/sdk/ethers`、`@zama-fhe/react-sdk/wagmi`。
+Signer adapters are still imported from subpaths, such as `@zama-fhe/sdk/viem`, `@zama-fhe/sdk/ethers`, and `@zama-fhe/react-sdk/wagmi`.
 
-## 项目形态
+## Project Shapes
 
-| 项目形态 | 使用 |
+| Project Shape | Use |
 | --- | --- |
-| React / wagmi 前端 | `@zama-fhe/react-sdk`、`ZamaProvider`、`WagmiSigner`、React hooks |
-| Browser / vanilla TypeScript | `@zama-fhe/sdk`、`RelayerWeb`、`ZamaSDK`、`ViemSigner` 或自定义 signer |
-| Node 脚本或后端 | `@zama-fhe/sdk`、`@zama-fhe/sdk/node`、`RelayerNode` |
-| 本地 cleartext 应用 | `@zama-fhe/sdk/cleartext`、`RelayerCleartext` |
-| ERC7984 confidential token UI | `Token`、`ReadonlyToken`、token hooks |
-| 自定义 encrypted 应用 | `relayer.encrypt`、contract write、`sdk.userDecrypt`、`sdk.publicDecrypt` |
+| React / wagmi frontend | `@zama-fhe/react-sdk`, `ZamaProvider`, `WagmiSigner`, React hooks |
+| Browser / vanilla TypeScript | `@zama-fhe/sdk`, `RelayerWeb`, `ZamaSDK`, `ViemSigner`, or a custom signer |
+| Node script or backend | `@zama-fhe/sdk`, `@zama-fhe/sdk/node`, `RelayerNode` |
+| Local cleartext app | `@zama-fhe/sdk/cleartext`, `RelayerCleartext` |
+| ERC7984 confidential token UI | `Token`, `ReadonlyToken`, token hooks |
+| Custom encrypted app | `relayer.encrypt`, contract writes, `sdk.userDecrypt`, `sdk.publicDecrypt` |
 
-## 推荐项目结构
+## Recommended Project Structure
 
-React/wagmi 应用：
+React/wagmi application:
 
 ```text
 src/
   app/
-    providers.tsx          # WagmiProvider、QueryClientProvider、ZamaProvider
+    providers.tsx          # WagmiProvider, QueryClientProvider, ZamaProvider
   lib/
     zama/
-      config.ts            # chains、transport config、registry overrides
-      sdk.ts               # 如有需要，放 relayer/signer helper
-      contracts.ts         # addresses 和 ABI imports
-      conversions.ts       # bytesToHex、handle guards、unit helpers
+      config.ts            # chains, transport config, registry overrides
+      sdk.ts               # relayer/signer helpers if needed
+      contracts.ts         # addresses and ABI imports
+      conversions.ts       # bytesToHex, handle guards, unit helpers
   features/
     confidential-token/
-      hooks.ts             # 面向产品 UI 组合 token hooks
+      hooks.ts             # compose token hooks for product UI
       components.tsx
     custom-contract/
-      actions.ts           # encrypt + write + decrypt 编排
+      actions.ts           # encrypt + write + decrypt orchestration
 ```
 
-Node 后端：
+Node backend:
 
 ```text
 src/
   zama/
-    config.ts              # chain ids、RPC URLs、私有 env 读取
-    signer.ts              # 创建 ViemSigner 或 EthersSigner
+    config.ts              # chain ids, RPC URLs, private env reads
+    signer.ts              # create ViemSigner or EthersSigner
     sdk.ts                 # ZamaSDK + RelayerNode factory
-    proxy.ts               # 可选 browser-to-relayer proxy
-    jobs.ts                # public decrypt 或监控任务
+    proxy.ts               # optional browser-to-relayer proxy
+    jobs.ts                # public decrypt or monitoring jobs
 ```
 
-把合约 ABI/address 与 SDK 创建逻辑分开。这样更容易检查切链、测试和前后端边界。
+Keep contract ABI/address definitions separate from SDK creation logic. This makes chain switching, testing, and frontend/backend boundaries easier to audit.
 
-## 安装
+## Installation
 
-React / wagmi：
+React / wagmi:
 
 ```bash
 pnpm add @zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query wagmi viem
 ```
 
-使用 viem 的 vanilla TypeScript 或 Node.js：
+Vanilla TypeScript or Node.js with viem:
 
 ```bash
 pnpm add @zama-fhe/sdk viem
 ```
 
-使用 ethers 的 vanilla TypeScript 或 Node.js：
+Vanilla TypeScript or Node.js with ethers:
 
 ```bash
 pnpm add @zama-fhe/sdk ethers
 ```
 
-在 Node 中运行 SDK 代码的项目使用 Node.js `>=22`。
+Projects that run SDK code in Node should use Node.js `>=22`.
 
-新项目不要照抄过期版本号。先查询真实发布版本，并让 `@zama-fhe/sdk` 与 `@zama-fhe/react-sdk` 使用同一发布版本：
+Do not copy stale version numbers into new projects. First query the real published versions, and keep `@zama-fhe/sdk` and `@zama-fhe/react-sdk` on the same release version:
 
 ```bash
 pnpm view @zama-fhe/sdk version
 pnpm view @zama-fhe/react-sdk version
 ```
 
-React + TypeScript 项目还要安装框架类型包，例如 `@types/react`、`@types/react-dom`。wagmi 项目优先用 `@zama-fhe/react-sdk/wagmi` 的 `WagmiSigner`；如果当前 SDK/wagmi 组合构建失败，改用 `configuration.md` 里的 custom `GenericSigner` fallback。
+React + TypeScript projects also need framework type packages such as `@types/react` and `@types/react-dom`. For wagmi projects, prefer `WagmiSigner` from `@zama-fhe/react-sdk/wagmi`; if the current SDK/wagmi combination fails to build, use the custom `GenericSigner` fallback in `configuration.md`.
 
-## 认证规则
+## Authentication Rules
 
-relayer 请求需要 API key。Browser 应用应通过后端 proxy 转发 relayer 请求，让 key 留在服务端：
+Relayer requests require an API key. Browser applications should forward relayer requests through a backend proxy so the key stays on the server:
 
 ```ts
 relayerUrl: "https://your-app.com/api/relayer/11155111"
 ```
 
-服务端脚本和后端服务可以在 transport config 里直接传 credentials：
+Server scripts and backend services can pass credentials directly in the transport config:
 
 ```ts
 auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! }
 ```
 
-前端框架里只暴露公开变量。Next.js 使用 `NEXT_PUBLIC_`，Vite 使用 `VITE_`。
+Expose only public variables in frontend frameworks. Next.js uses `NEXT_PUBLIC_`; Vite uses `VITE_`.
 
-## Runtime 组成
+## Runtime Components
 
-每个接入都由四个部分组合：
+Every integration combines four parts:
 
-| 部分 | 责任 | 常用选择 |
+| Part | Responsibility | Common Choices |
 | --- | --- | --- |
-| Relayer runtime | 加密材料、decrypt 请求、proof 请求 | `RelayerWeb`、`RelayerNode`、`RelayerCleartext` |
-| Signer | chain id、account、typed-data signatures、contract calls | `WagmiSigner`、`ViemSigner`、`EthersSigner` |
-| Storage | keypair、session signature、decrypt cache | `indexedDBStorage`、`memoryStorage`、`asyncLocalStorage` |
-| SDK facade | credentials、cache、token registry、token objects | `ZamaSDK`、`ZamaProvider` |
+| Relayer runtime | Encryption material, decrypt requests, proof requests | `RelayerWeb`, `RelayerNode`, `RelayerCleartext` |
+| Signer | Chain id, account, typed-data signatures, contract calls | `WagmiSigner`, `ViemSigner`, `EthersSigner` |
+| Storage | Keypair, session signature, decrypt cache | `indexedDBStorage`, `memoryStorage`, `asyncLocalStorage` |
+| SDK facade | Credentials, cache, token registry, token objects | `ZamaSDK`, `ZamaProvider` |
 
-## 最小 Browser SDK
+## Minimal Browser SDK
 
 ```ts
 import {
@@ -173,11 +173,11 @@ export const sdk = new ZamaSDK({
 });
 ```
 
-Browser 代码在需要 relayer credentials 时应使用服务端 proxy URL。不要把私有 API key 放进前端 bundle。
+Browser code that needs relayer credentials should use a server-side proxy URL. Never put a private API key into the frontend bundle.
 
-## 第一笔 confidential transfer
+## First Confidential Transfer
 
-官方 30 秒流程以 token 为中心：
+The official 30-second flow is token-centric:
 
 ```ts
 const token = sdk.createToken("0xYourEncryptedERC20");
@@ -188,9 +188,9 @@ await token.confidentialTransfer("0xRecipient", 500n);
 await token.unshield(500n);
 ```
 
-ERC7984 confidential token 应用优先走这条路径。只有合约本身定义了自定义 encrypted 参数时，才读 `custom-contracts.md`。
+ERC7984 confidential token applications should prefer this path. Only read `custom-contracts.md` when the contract itself defines custom encrypted parameters.
 
-## 最小 React Provider
+## Minimal React Provider
 
 ```tsx
 "use client";
@@ -232,9 +232,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-`ZamaProvider` 必须位于 `QueryClientProvider` 之下。Next.js 中这个文件必须是 client-only。
+`ZamaProvider` must be nested under `QueryClientProvider`. In Next.js, this file must be client-only.
 
-## 最小 React Token 页面
+## Minimal React Token Page
 
 ```tsx
 import { type FormEvent } from "react";
@@ -260,7 +260,7 @@ function MyTokenPage() {
   const transfer = useConfidentialTransfer({ tokenAddress });
 
   if (!isConnected) {
-    return <button onClick={() => connect({ connector: injected() })}>连接钱包</button>;
+    return <button onClick={() => connect({ connector: injected() })}>Connect wallet</button>;
   }
 
   async function handleShield(e: FormEvent<HTMLFormElement>) {
@@ -280,9 +280,9 @@ function MyTokenPage() {
 
   return (
     <section>
-      <p>已连接：{address}</p>
+      <p>Connected: {address}</p>
       {meta && <p>{meta.name} ({meta.symbol})</p>}
-      <p>余额：{isLoading ? "解密中..." : balance?.toString()}</p>
+      <p>Balance: {isLoading ? "Decrypting..." : balance?.toString()}</p>
       <form onSubmit={handleShield}>
         <input name="amount" type="number" required />
         <button disabled={shield.isPending}>Shield</button>
@@ -290,17 +290,17 @@ function MyTokenPage() {
       <form onSubmit={handleTransfer}>
         <input name="to" placeholder="0x..." required />
         <input name="amount" type="number" required />
-        <button disabled={transfer.isPending}>私密转账</button>
+        <button disabled={transfer.isPending}>Confidential transfer</button>
       </form>
-      <button onClick={() => disconnect()}>断开连接</button>
+      <button onClick={() => disconnect()}>Disconnect</button>
     </section>
   );
 }
 ```
 
-如果 confidential token 合约本身就是 wrapper，可以省略 `wrapperAddress`。多数 wrapped ERC20 项目会有独立 wrapper address，shield、unshield、underlying allowance 和 approve underlying 都应显式传入。
+If the confidential token contract is itself the wrapper, `wrapperAddress` can be omitted. Most wrapped ERC20 projects have a separate wrapper address, so shield, unshield, underlying allowance, and approve underlying calls should pass it explicitly.
 
-## 最小 Node SDK
+## Minimal Node SDK
 
 ```ts
 import { ZamaSDK, SepoliaConfig, memoryStorage } from "@zama-fhe/sdk";
@@ -325,13 +325,13 @@ export const sdk = new ZamaSDK({
 });
 ```
 
-长生命周期服务器不要在多用户之间共享一个 `memoryStorage`。使用 request-scoped storage，或按可信 job 边界创建 SDK 实例。
+Long-lived servers should not share a single `memoryStorage` across users. Use request-scoped storage, or create SDK instances along trusted job boundaries.
 
 ## FHE Artifact Cache
 
-`RelayerWeb` 和 `RelayerNode` 会缓存大型 FHE public keys 与参数，避免每次启动都重新下载。Browser runtime 默认用 IndexedDB 持久化；Node runtime 默认保存在内存中。可通过 `fheArtifactStorage` 和 `fheArtifactCacheTTL` 调整。
+`RelayerWeb` and `RelayerNode` cache large FHE public keys and parameters so they do not have to be downloaded on every startup. The browser runtime persists them in IndexedDB by default; the Node runtime stores them in memory by default. Adjust this with `fheArtifactStorage` and `fheArtifactCacheTTL`.
 
-## 最小本地 Cleartext
+## Minimal Local Cleartext
 
 ```ts
 import { ZamaSDK, memoryStorage } from "@zama-fhe/sdk";
@@ -344,14 +344,14 @@ const relayer = new RelayerCleartext(hardhatCleartextConfig);
 const sdk = new ZamaSDK({ relayer, signer, storage: memoryStorage });
 ```
 
-Cleartext 模式只用于兼容本地 stack 的开发和测试。不要用于 Sepolia 或 Mainnet 路径。
+Cleartext mode is only for development and testing against a compatible local stack. Do not use it for Sepolia or Mainnet paths.
 
-## 第一次接入检查清单
+## First Integration Checklist
 
-- 决定是 custom contract flow 还是 ERC7984 token flow。
-- 确认 chain id、contract address、user address、ABI 和 network URL。
-- 加密时的 `contractAddress` 必须是调用 `FHE.fromExternal` 的合约。
-- 合约写入前把 `Uint8Array` handles 和 proof 转为 hex。
-- 从合约读回的 handles 通常已经是 `0x...` 字符串，保持原样。
-- user decrypt 要受钱包连接、正确链、授权状态 gate。
-- 私有 relayer credentials 只放在服务端。
+- Decide whether this is a custom contract flow or an ERC7984 token flow.
+- Confirm the chain id, contract address, user address, ABI, and network URL.
+- The `contractAddress` used during encryption must be the contract that calls `FHE.fromExternal`.
+- Convert `Uint8Array` handles and proofs to hex before contract writes.
+- Handles read back from contracts are usually already `0x...` strings; keep them as-is.
+- Gate user decryption behind wallet connection, correct chain, and authorization state.
+- Keep private relayer credentials on the server only.

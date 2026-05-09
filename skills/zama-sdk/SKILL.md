@@ -1,56 +1,56 @@
 ---
 name: zama-sdk
-description: 使用 Zama SDK 构建 FHEVM dApp、脚本、后端或 React 前端时使用。适用于 @zama-fhe/sdk、@zama-fhe/react-sdk、RelayerWeb、RelayerNode、RelayerCleartext、ZamaSDK、ZamaProvider、WagmiSigner/ViemSigner/EthersSigner、encrypted input、user decrypt、public decrypt、delegated decrypt、ERC7984 confidential token、wagmi/viem/ethers 集成。
+description: Use this when a TypeScript application needs to interact with Zama FHEVM/confidential contracts. Covers browser and React dApps with @zama-fhe/sdk and @zama-fhe/react-sdk, wagmi/viem/ethers wallet integration, Node scripts or backend services, local cleartext development, relayer configuration, encrypted inputs, user/public/delegated decryption, and ERC7984 confidential token workflows.
 ---
 
 # Zama SDK
 
-`@zama-fhe/sdk` 和 `@zama-fhe/react-sdk` 是 Zama Protocol 的 TypeScript SDK，用于在应用层接入 FHEVM / confidential smart contracts。它覆盖浏览器 dApp、React/wagmi 前端、Node.js 脚本或后端、本地 cleartext 开发，以及 ERC7984 confidential token 的常见产品流程。
+`@zama-fhe/sdk` and `@zama-fhe/react-sdk` are the TypeScript SDKs for integrating Zama Protocol FHEVM / confidential smart contracts at the application layer. They cover browser dApps, React/wagmi frontends, Node.js scripts or backends, local cleartext development, and common ERC7984 confidential token product flows.
 
-官方 GitHub 仓库：`https://github.com/zama-ai/sdk`
+Official GitHub repository: `https://github.com/zama-ai/sdk`
 
-## 包含内容
+## Included Content
 
-这个 skill 主要整理这些主题：
+This skill primarily organizes the following topics:
 
-- SDK 初始化：relayer runtime、signer、storage、network transport。
-- React 集成：`ZamaProvider`、wagmi、TanStack Query hooks、Next.js client/server 边界。
-- 自定义 FHE 合约：encrypted input、input proof、contract write、user decrypt、public decrypt。
-- ERC7984 token：shield、confidential balance、confidential transfer、operator approval、unshield、registry discovery。
-- Node 和本地开发：`RelayerNode`、request-scoped storage、proxy、`RelayerCleartext`。
-- 产品集成：activity feed、wallet/exchange 展示、delegated decryption、typed errors 和排障。
+- SDK initialization: relayer runtime, signer, storage, and network transport.
+- React integration: `ZamaProvider`, wagmi, TanStack Query hooks, and Next.js client/server boundaries.
+- Custom FHE contracts: encrypted inputs, input proofs, contract writes, user decryption, and public decryption.
+- ERC7984 tokens: shield, confidential balances, confidential transfers, operator approvals, unshield, and registry discovery.
+- Node and local development: `RelayerNode`, request-scoped storage, proxies, and `RelayerCleartext`.
+- Product integration: activity feeds, wallet/exchange displays, delegated decryption, typed errors, and troubleshooting.
 
-## 如何使用
+## How to Use
 
-1. 先判断你做的是 ERC7984 token flow，还是自定义 FHE 合约 flow。
-2. 再判断运行环境：React/browser、vanilla TypeScript、Node 后端/脚本，或本地 cleartext。
-3. 按环境选 reference，先搭好 SDK/Provider，再实现具体业务动作。
-4. API 名称或参数不确定时，看 `references/api-reference.md`，再到项目安装后的 `node_modules/@zama-fhe/*` 查类型。
+1. First decide whether you are implementing an ERC7984 token flow or a custom FHE contract flow.
+2. Then identify the runtime environment: React/browser, vanilla TypeScript, Node backend/script, or local cleartext.
+3. Choose the reference for that environment, set up the SDK/Provider first, then implement the specific business action.
+4. When an API name or parameter shape is uncertain, check `references/api-reference.md`, then inspect the installed `node_modules/@zama-fhe/*` types in the target project.
 
-## Reference 索引
+## Reference Index
 
-| 文件 | 何时查看 |
+| File | When to Read |
 | --- | --- |
-| `references/getting-started.md` | 新项目第一次接入；需要快速理解 SDK 能做什么、安装哪些包、最小 React/Node/local 示例怎么写。 |
-| `references/configuration.md` | 配 relayer、network preset、API key、backend proxy、signer、storage、registry override、artifact cache。 |
-| `references/session-security.md` | 处理钱包签名弹窗、decrypt credentials、TTL、session lifecycle、浏览器安全、API key 边界。 |
-| `references/custom-contracts.md` | 目标合约不是 ERC7984 token，而是 auction、vault、counter、voting 等自定义 encrypted state。 |
-| `references/react-wagmi-nextjs.md` | React、wagmi 或 Next.js 项目；需要 provider 栈、hooks、授权 gate、SSR/client 边界。 |
-| `references/node-and-local.md` | Node 脚本、后端服务、server-side relayer auth、request isolation、本地 cleartext runtime。 |
-| `references/token-workflows.md` | ERC7984 confidential token 的 shield、balance、transfer、approve、unshield、registry 和 token hooks。 |
-| `references/activity-wallet-integration.md` | 钱包、portfolio、交易所或 dashboard；需要 activity feed、wrapper discovery、operator/delegation UX。 |
-| `references/errors-events.md` | 需要 typed error handling、`matchZamaError`、SDK lifecycle events、event decoders、activity helpers。 |
-| `references/api-reference.md` | 查询 import path、class/hook 名称、参数形态、query factory 和本地类型入口。 |
-| `references/troubleshooting.md` | 出现 import、worker/WASM、relayer auth、decrypt、token balance、registry、cleartext 等问题时排查。 |
+| `references/getting-started.md` | First integration in a new project; quickly understand what the SDK does, which packages to install, and how to write minimal React/Node/local examples. |
+| `references/configuration.md` | Configure relayers, network presets, API keys, backend proxies, signers, storage, registry overrides, and artifact caching. |
+| `references/session-security.md` | Handle wallet signature prompts, decrypt credentials, TTLs, session lifecycle, browser security, and API key boundaries. |
+| `references/custom-contracts.md` | The target contract is not an ERC7984 token, but custom encrypted state such as auctions, vaults, counters, or voting. |
+| `references/react-wagmi-nextjs.md` | React, wagmi, or Next.js projects that need provider wiring, hooks, authorization gates, and SSR/client boundaries. |
+| `references/node-and-local.md` | Node scripts, backend services, server-side relayer auth, request isolation, and local cleartext runtime. |
+| `references/token-workflows.md` | ERC7984 confidential token shield, balance, transfer, approve, unshield, registry, and token hooks. |
+| `references/activity-wallet-integration.md` | Wallets, portfolios, exchanges, or dashboards that need activity feeds, wrapper discovery, and operator/delegation UX. |
+| `references/errors-events.md` | Typed error handling, `matchZamaError`, SDK lifecycle events, event decoders, and activity helpers. |
+| `references/api-reference.md` | Look up import paths, class/hook names, parameter shapes, query factories, and local type entry points. |
+| `references/troubleshooting.md` | Debug import, worker/WASM, relayer auth, decrypt, token balance, registry, and cleartext issues. |
 
-## 工作流程
+## Workflow
 
-1. 先读目标项目的 `package.json`、lockfile、Node 版本、framework 和 wallet stack。
-2. 按上面的索引选择最相关的 reference，不需要从头读完整套文档。
-3. 按环境选 runtime：browser/React 用 `RelayerWeb`，Node 后端/脚本用 `RelayerNode`，本地 cleartext 用 `RelayerCleartext`。
-4. 新项目先查询 pnpm registry 上真实可用的 `@zama-fhe/sdk` / `@zama-fhe/react-sdk` 版本，不要照写陈旧版本号。
-5. 按 wallet stack 选 signer：wagmi 优先尝试 `WagmiSigner`；如果当前 SDK/wagmi 组合构建失败，立即改用本 skill 的 custom `GenericSigner` fallback；viem 用 `ViemSigner`，ethers 用 `EthersSigner`。
-6. 按数据生命周期选 storage：browser 用 `indexedDBStorage`，测试/一次性脚本用 `memoryStorage`，Node 多请求隔离用 `asyncLocalStorage`。
-7. 先搭 SDK/Provider，再实现业务流程；不要在同一步里混合网络配置、钱包状态、合约 ABI 和 UI state。
-8. token 任务按 shield、balance、transfer、operator approval、unshield、activity feed 拆；自定义合约任务走 encrypt/decrypt 文档。
-9. 最后检查 contract address、user address、chain id、handle、input proof、ACL、API key 暴露、session TTL、browser security headers 和 SSR 边界。
+1. First read the target project's `package.json`, lockfile, Node version, framework, and wallet stack.
+2. Pick the most relevant reference from the index above; there is no need to read the full documentation set end to end.
+3. Choose the runtime by environment: use `RelayerWeb` for browser/React, `RelayerNode` for Node backends/scripts, and `RelayerCleartext` for local cleartext.
+4. For new projects, query the real published `@zama-fhe/sdk` / `@zama-fhe/react-sdk` versions from the pnpm registry instead of copying stale versions.
+5. Choose the signer by wallet stack: try `WagmiSigner` first for wagmi; if the current SDK/wagmi combination fails to build, immediately switch to the custom `GenericSigner` fallback in this skill; use `ViemSigner` for viem and `EthersSigner` for ethers.
+6. Choose storage by data lifecycle: `indexedDBStorage` for browsers, `memoryStorage` for tests or one-off scripts, and `asyncLocalStorage` for request isolation in Node.
+7. Set up the SDK/Provider before implementing business flows; avoid mixing network configuration, wallet state, contract ABIs, and UI state in the same step.
+8. Split token tasks into shield, balance, transfer, operator approval, unshield, and activity feed work; route custom contract tasks through the encrypt/decrypt documentation.
+9. Finally check contract address, user address, chain id, handle, input proof, ACL, API key exposure, session TTL, browser security headers, and SSR boundaries.

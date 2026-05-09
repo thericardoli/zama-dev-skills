@@ -1,121 +1,121 @@
-# 排障
+# Troubleshooting
 
-本文件列出常见失败模式、可能原因和最快检查顺序。
+This document lists common failure modes, likely causes, and the fastest order of checks.
 
-## 导入或导出错误
+## Import or Export Errors
 
-先检查 import path：
+Check import paths first:
 
-- `RelayerNode` 来自 `@zama-fhe/sdk/node`
-- `RelayerCleartext` 来自 `@zama-fhe/sdk/cleartext`
-- `ViemSigner` 来自 `@zama-fhe/sdk/viem`
-- `EthersSigner` 来自 `@zama-fhe/sdk/ethers`
-- `WagmiSigner` 来自 `@zama-fhe/react-sdk/wagmi`
+- `RelayerNode` comes from `@zama-fhe/sdk/node`
+- `RelayerCleartext` comes from `@zama-fhe/sdk/cleartext`
+- `ViemSigner` comes from `@zama-fhe/sdk/viem`
+- `EthersSigner` comes from `@zama-fhe/sdk/ethers`
+- `WagmiSigner` comes from `@zama-fhe/react-sdk/wagmi`
 
-然后检查：
+Then check:
 
 ```bash
 cat package.json
 rg "@zama-fhe/(sdk|react-sdk)|RelayerWeb|RelayerNode|RelayerCleartext|ZamaProvider|WagmiSigner|ViemSigner|EthersSigner"
 ```
 
-如果 pnpm 安装时报 `No matching version found for @zama-fhe/react-sdk@...`，说明示例或模型记忆里的版本已经过期。先查询真实版本，再同步两个 SDK 包：
+If pnpm install reports `No matching version found for @zama-fhe/react-sdk@...`, the version in the example or model memory is stale. Query real versions first, then synchronize both SDK packages:
 
 ```bash
 pnpm view @zama-fhe/sdk versions --json
 pnpm view @zama-fhe/react-sdk versions --json
 ```
 
-如果生产构建时报 `"watchConnection" is not exported by "wagmi/actions"` 或类似 wagmi action export mismatch，问题在 `@zama-fhe/react-sdk/wagmi` adapter 与当前 wagmi 版本不匹配。不要改 `node_modules`；使用 `configuration.md` 里的 custom `GenericSigner` fallback，或固定到已验证的 SDK/wagmi/viem 版本组合。
+If a production build reports `"watchConnection" is not exported by "wagmi/actions"` or a similar wagmi action export mismatch, the issue is incompatibility between the `@zama-fhe/react-sdk/wagmi` adapter and the current wagmi version. Do not modify `node_modules`; use the custom `GenericSigner` fallback in `configuration.md`, or pin to a verified SDK/wagmi/viem version combination.
 
-## `window is not defined` 或 SSR Crash
+## `window is not defined` or SSR Crash
 
-可能原因：
+Likely causes:
 
-- server component import 了 React SDK hook
-- 在 server-side module scope 创建了 `RelayerWeb`
-- provider 文件缺少 `"use client"`
-- client/server 共享模块实例化了 browser SDK 代码
+- A server component imports a React SDK hook.
+- `RelayerWeb` is created in server-side module scope.
+- The provider file is missing `"use client"`.
+- A client/server shared module instantiates browser SDK code.
 
-修复：
+Fixes:
 
-- 把 provider 和 SDK browser runtime 移到 client component
-- server-only API route code 与 browser code 分离
-- 必要时动态 import client-only components
+- Move the provider and SDK browser runtime into a client component.
+- Separate server-only API route code from browser code.
+- Dynamically import client-only components when necessary.
 
-## Worker、WASM 或 SharedArrayBuffer 问题
+## Worker, WASM, or SharedArrayBuffer Issues
 
-症状：
+Symptoms:
 
-- encryption 卡在 initialization
-- browser console 提到 worker 或 WASM loading
-- browser console 提到 COOP/COEP 或 SharedArrayBuffer
-- `relayer.status === "error"`
+- Encryption is stuck during initialization.
+- Browser console mentions worker or WASM loading.
+- Browser console mentions COOP/COEP or SharedArrayBuffer.
+- `relayer.status === "error"`.
 
-检查：
+Checks:
 
-1. 查看 `relayer.initError`。
-2. 如可用，使用 `onStatusChange` 加 status logging。
-3. 配置 headers：
+1. Inspect `relayer.initError`.
+2. If available, add status logging with `onStatusChange`.
+3. Configure headers:
 
 ```txt
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-4. 如果配置了 `threads`，先把 thread count 设为 1 或移除 `threads`，确认单线程 fallback 是否可用。
-5. 如果应用有 CSP，确认允许 `worker-src blob:`、`script-src 'wasm-unsafe-eval'` 和 `connect-src https://cdn.zama.org`。
-6. 确认 bundler 没有把 SDK runtime 放进 server code。
+4. If `threads` is configured, first set the thread count to 1 or remove `threads` to confirm whether the single-threaded fallback works.
+5. If the application has CSP, confirm it allows `worker-src blob:`, `script-src 'wasm-unsafe-eval'`, and `connect-src https://cdn.zama.org`.
+6. Confirm the bundler has not placed SDK runtime code into server code.
 
-## 浏览器 Credential 暴露
+## Browser Credential Exposure
 
-危险信号：
+Danger sign:
 
 ```ts
 auth: { __type: "ApiKeyHeader", value: "..." }
 ```
 
-出现在 browser code 中。
+appears in browser code.
 
-修复 browser config，改用 proxy URL：
+Fix browser config by using a proxy URL:
 
 ```ts
 relayerUrl: "/api/relayer/11155111"
 ```
 
-私有 credentials 只放在 server-side route handlers、workers、jobs 或 secret managers 中。
+Keep private credentials only in server-side route handlers, workers, jobs, or secret managers.
 
-## 加密合约调用 Revert
+## Encrypted Contract Call Reverts
 
-检查：
+Check:
 
-- 加密时使用的 `contractAddress` 是否是调用 `FHE.fromExternal` 的合约
-- `userAddress` 是否是 connected account
-- chain id 是否匹配 deployed contract 和 SDK transport
-- ABI function name 和 argument order 是否正确
-- handles 和 input proof 是否来自同一次 encrypt 调用
-- `Uint8Array` 是否只转 hex 一次
-- Solidity 函数是否接收 encrypted external type 加 proof
-- 合约保存新 handles 后是否正确传播 ACL
+- Whether the `contractAddress` used for encryption is the contract that calls `FHE.fromExternal`.
+- Whether `userAddress` is the connected account.
+- Whether the chain id matches the deployed contract and SDK transport.
+- Whether ABI function name and argument order are correct.
+- Whether handles and input proof come from the same encrypt call.
+- Whether `Uint8Array` values are converted to hex only once.
+- Whether the Solidity function accepts the encrypted external type plus proof.
+- Whether the contract correctly propagates ACL after saving new handles.
 
-## 用户解密失败
+## User Decryption Fails
 
-按顺序检查：
+Check in order:
 
-1. handle 是否是 zero handle；zero handle 直接显示 0。
-2. handle 是否属于传入的 `contractAddress`。
-3. 合约是否允许当前 user 或 delegate。
-4. app 是否对所有需要的 contracts 调用了 `sdk.allow` 或 `useAllow`。
-5. session 是否过期。
-6. account 或 chain 是否变化。
-7. relayer proxy 是否返回 401、403 或 5xx。
-8. storage 是否在用户之间错误共享。
+1. Is the handle a zero handle? Zero handles should be displayed as 0 directly.
+2. Does the handle belong to the supplied `contractAddress`?
+3. Does the contract allow the current user or delegate?
+4. Has the app called `sdk.allow` or `useAllow` for every required contract?
+5. Has the session expired?
+6. Did account or chain change?
+7. Does the relayer proxy return 401, 403, or 5xx?
+8. Is storage incorrectly shared across users?
 
-## 意外的钱包签名弹窗
+## Unexpected Wallet Signature Prompts
 
-常见原因：cached authorization 未确认前 decrypt query 就启动了。
+Common cause: the decrypt query starts before cached authorization has been confirmed.
 
-修复：
+Fix:
 
 ```tsx
 const { data: allowed } = useIsAllowed({
@@ -128,85 +128,85 @@ const decrypt = useUserDecrypt(
 );
 ```
 
-优先提供显式的 "授权" 动作，调用 `useAllow`。
+Prefer an explicit "Authorize" action that calls `useAllow`.
 
-## 公开解密失败
+## Public Decryption Fails
 
-public decrypt 只适用于合约逻辑明确公开的 handles。
+Public decrypt applies only to handles that contract logic has explicitly made public.
 
-检查：
+Check:
 
-- 合约是否已 request 或标记该值可 public decrypt
-- handle 是否来自正确 contract 和 chain
-- app 是否等待了所需 off-chain proof flow
-- finalize ABI 是否期望当前提交的 clear value encoding
-- callback 是否有 replay protection 和 requested/finalized guards
+- Whether the contract requested or marked the value as public decryptable.
+- Whether the handle comes from the correct contract and chain.
+- Whether the app waited for the required off-chain proof flow.
+- Whether the finalize ABI expects the submitted clear value encoding.
+- Whether the callback has replay protection and requested/finalized guards.
 
-## Token 余额检查错误
+## Token Balance Check Errors
 
-token operation 的 balance check 可能需要 decrypt credentials。
+Token operation balance checks may require decrypt credentials.
 
-如果 balance check unavailable：
+If balance check is unavailable:
 
-- 调用 `token.allow()`、`sdk.allow([tokenAddress])` 或 `useAllow`
-- 只有显式接受链上 revert 风险时才使用 `skipBalanceCheck`
-- account、chain 或 token 变化后刷新 balance handles
+- Call `token.allow()`, `sdk.allow([tokenAddress])`, or `useAllow`.
+- Use `skipBalanceCheck` only when explicitly accepting on-chain revert risk.
+- Refresh balance handles after account, chain, or token changes.
 
-如果 balance 不足：
+If balance is insufficient:
 
-- 检查 token decimals
-- 检查 connected account
-- 区分 public ERC20 balance 和 confidential balance
-- 检查 wrapper 和 underlying token addresses
+- Check token decimals.
+- Check the connected account.
+- Distinguish public ERC20 balance from confidential balance.
+- Check wrapper and underlying token addresses.
 
-如果抛 `NoCiphertextError`：
+If `NoCiphertextError` is thrown:
 
-- 这表示账户没有 encrypted balance handle，不等于 `0n`
-- UI 应显示空状态或引导 shield
-- 不要把它归类为 relayer failure
+- It means the account has no encrypted balance handle; it is not equal to `0n`.
+- UI should show an empty state or guide the user to shield.
+- Do not classify it as a relayer failure.
 
-## Registry 或 Wrapper 找不到
+## Registry or Wrapper Not Found
 
-检查：
+Check:
 
-- 当前 chain 是否配置了 registry
-- 本地 chain 是否使用 `registryAddresses`
-- token 是否支持预期 ERC7984 interfaces
-- wrapper 是否有预期的 underlying public ERC20
-- signer 中的 chain id 是否与 registry override chain id 匹配
+- Whether the current chain has a configured registry.
+- Whether the local chain uses `registryAddresses`.
+- Whether the token supports the expected ERC7984 interfaces.
+- Whether the wrapper has the expected underlying public ERC20.
+- Whether the signer's chain id matches the registry override chain id.
 
-## 本地 Cleartext 不匹配
+## Local Cleartext Mismatch
 
-Cleartext 模式只适用于兼容的本地 cleartext deployment。
+Cleartext mode applies only to compatible local cleartext deployments.
 
-失败信号：
+Failure signals:
 
-- 在 Sepolia 或 Mainnet 使用 cleartext runtime
-- 本地合约部署的 FHE mode 与 cleartext runtime 不匹配
-- app 期待 public decrypt proof behavior，但 cleartext setup 不支持
-- contract addresses 从另一次 local node session 复制过来
+- Using cleartext runtime on Sepolia or Mainnet.
+- The local contract deployment's FHE mode does not match the cleartext runtime.
+- The app expects public decrypt proof behavior that the cleartext setup does not support.
+- Contract addresses were copied from a different local node session.
 
-快速检查：
+Fast checks:
 
 ```bash
 cast client --rpc-url http://127.0.0.1:8545
 cast chain-id --rpc-url http://127.0.0.1:8545
 ```
 
-如果 forge-fhevm `deploy-local.sh` 报 `could not detect a supported local RPC backend`，显式传：
+If forge-fhevm `deploy-local.sh` reports `could not detect a supported local RPC backend`, pass it explicitly:
 
 ```bash
 LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545
 ```
 
-## 安全检查清单
+## Security Checklist
 
-- API keys 只在服务端
-- mnemonic/private key 不提交
-- frontend config 只包含公开值
-- user decrypt authorization 只覆盖必要 contracts
-- session TTL 是有意设置的
-- account 或 chain 变化时清理 decrypt cache
-- 合约 ACL 与 UI decrypt 假设一致
-- public decrypt 只用于公开数据
-- logs 不包含 secrets、private keys 或敏感 signatures
+- API keys are server-only.
+- Mnemonics/private keys are not committed.
+- Frontend config contains only public values.
+- User decrypt authorization covers only necessary contracts.
+- Session TTL is set deliberately.
+- Clear decrypt cache on account or chain changes.
+- Contract ACL matches UI decrypt assumptions.
+- Public decrypt is used only for public data.
+- Logs do not contain secrets, private keys, or sensitive signatures.

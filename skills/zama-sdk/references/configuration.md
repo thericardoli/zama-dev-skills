@@ -1,40 +1,40 @@
-# 配置
+# Configuration
 
-每个 SDK 实例都需要三个核心部分：relayer runtime、signer 和 storage backend。本文件沿用官方 configuration guide 的结构，并补充 authentication、browser/server 边界、artifact cache、web extension 和清理逻辑。
+Every SDK instance needs three core parts: a relayer runtime, a signer, and a storage backend. This document follows the structure of the official configuration guide and adds notes on authentication, browser/server boundaries, artifact caching, web extensions, and cleanup.
 
-## 包导出
+## Package Exports
 
-Core SDK：
+Core SDK:
 
-| Import path | 用途 |
+| Import path | Purpose |
 | --- | --- |
-| `@zama-fhe/sdk` | `ZamaSDK`、`RelayerWeb`、网络预设、storage、`Token`、`ReadonlyToken`、builders、errors |
-| `@zama-fhe/sdk/node` | `RelayerNode`、worker options、`asyncLocalStorage` |
-| `@zama-fhe/sdk/cleartext` | `RelayerCleartext`、`hardhatCleartextConfig`、`hoodiCleartextConfig` |
-| `@zama-fhe/sdk/viem` | `ViemSigner` 和 viem helper |
-| `@zama-fhe/sdk/ethers` | `EthersSigner` 和 ethers helper |
-| `@zama-fhe/sdk/query` | TanStack Query option factories 和 query keys |
+| `@zama-fhe/sdk` | `ZamaSDK`, `RelayerWeb`, network presets, storage, `Token`, `ReadonlyToken`, builders, errors |
+| `@zama-fhe/sdk/node` | `RelayerNode`, worker options, `asyncLocalStorage` |
+| `@zama-fhe/sdk/cleartext` | `RelayerCleartext`, `hardhatCleartextConfig`, `hoodiCleartextConfig` |
+| `@zama-fhe/sdk/viem` | `ViemSigner` and viem helpers |
+| `@zama-fhe/sdk/ethers` | `EthersSigner` and ethers helpers |
+| `@zama-fhe/sdk/query` | TanStack Query option factories and query keys |
 
-React SDK：
+React SDK:
 
-| Import path | 用途 |
+| Import path | Purpose |
 | --- | --- |
-| `@zama-fhe/react-sdk` | `ZamaProvider`、hooks、面向 React 的 re-exports |
+| `@zama-fhe/react-sdk` | `ZamaProvider`, hooks, and React-oriented re-exports |
 | `@zama-fhe/react-sdk/wagmi` | `WagmiSigner` |
 
-尽量从最具体的 export path 导入。常见错误是从 browser 主入口导入 `RelayerNode`，或从非 wagmi 路径导入 `WagmiSigner`。
+Import from the most specific export path whenever possible. Common mistakes include importing `RelayerNode` from the browser main entry point, or importing `WagmiSigner` from a non-wagmi path.
 
-## 依赖选择
+## Dependency Selection
 
-| 项目 | 安装 |
+| Project | Install |
 | --- | --- |
 | Browser / vanilla TS + viem | `@zama-fhe/sdk viem` |
 | Browser / vanilla TS + ethers | `@zama-fhe/sdk ethers` |
 | React / wagmi | `@zama-fhe/react-sdk @zama-fhe/sdk @tanstack/react-query viem wagmi` |
-| React / Vite / TypeScript | 上一行再加 `react react-dom @vitejs/plugin-react vite typescript @types/react @types/react-dom` |
-| Node backend | `@zama-fhe/sdk viem` 或 `@zama-fhe/sdk ethers` |
+| React / Vite / TypeScript | Previous row plus `react react-dom @vitejs/plugin-react vite typescript @types/react @types/react-dom` |
+| Node backend | `@zama-fhe/sdk viem` or `@zama-fhe/sdk ethers` |
 
-不要盲目升级 SDK 包，也不要写不存在的旧版本。新建项目先查真实发布版本：
+Do not upgrade SDK packages blindly, and do not write nonexistent old versions. For new projects, first query the real published versions:
 
 ```bash
 pnpm view @zama-fhe/sdk version
@@ -43,30 +43,30 @@ pnpm view wagmi version
 pnpm view viem version
 ```
 
-然后安装同一代的 `@zama-fhe/sdk` 和 `@zama-fhe/react-sdk`。如果项目已有 lockfile，优先保留当前主版本，再看已安装类型文件确认 API。
+Then install the same generation of `@zama-fhe/sdk` and `@zama-fhe/react-sdk`. If the project already has a lockfile, prefer keeping the current major version and inspect the installed type files to confirm the API.
 
-已验证的本地 React/wagmi demo 起点：
+Verified starting point for a local React/wagmi demo:
 
-| 包 | 版本策略 |
+| Package | Version Strategy |
 | --- | --- |
-| `@zama-fhe/sdk` / `@zama-fhe/react-sdk` | 同一发布版本，例如 `3.0.0` |
-| `wagmi` | 使用当前稳定 v2 时要验证 `@zama-fhe/react-sdk/wagmi` 是否能 bundle |
-| `viem` | 使用 wagmi 要求的兼容版本 |
-| `@types/react` / `@types/react-dom` | TypeScript React 项目必须显式安装 |
+| `@zama-fhe/sdk` / `@zama-fhe/react-sdk` | Same release version, for example `3.0.0` |
+| `wagmi` | When using the current stable v2, verify that `@zama-fhe/react-sdk/wagmi` can bundle |
+| `viem` | Use the compatible version required by wagmi |
+| `@types/react` / `@types/react-dom` | Must be installed explicitly in TypeScript React projects |
 
-如果 `@zama-fhe/react-sdk/wagmi` 在构建时报类似 `"watchConnection" is not exported by "wagmi/actions"`，不要 patch `node_modules`；改用 custom `GenericSigner` fallback。
+If `@zama-fhe/react-sdk/wagmi` fails during build with an error like `"watchConnection" is not exported by "wagmi/actions"`, do not patch `node_modules`; use the custom `GenericSigner` fallback instead.
 
-## 网络预设
+## Network Presets
 
-SDK 暴露的常用 preset：
+Common presets exposed by the SDK:
 
-| Preset | Chain ID | 典型用途 |
+| Preset | Chain ID | Typical Use |
 | --- | --- | --- |
 | `MainnetConfig` | `1` | Ethereum Mainnet |
 | `SepoliaConfig` | `11155111` | Sepolia testnet |
-| `HardhatConfig` | `31337` | local Hardhat node |
+| `HardhatConfig` | `31337` | Local Hardhat node |
 
-Preset 提供 SDK 所需的合约和网络元数据，包括 chain id、relayer URL、gateway address、ACL address、KMS verifier address。用 preset 作为基线，再覆盖项目自己的 RPC/proxy URL。
+Presets provide the contract and network metadata required by the SDK, including chain id, relayer URL, gateway address, ACL address, and KMS verifier address. Use a preset as the baseline, then override the project's own RPC/proxy URL.
 
 ```ts
 const transports = {
@@ -78,9 +78,9 @@ const transports = {
 };
 ```
 
-## 浏览器 Transport
+## Browser Transport
 
-Browser 代码在需要 relayer authentication 时应配置 proxy URL：
+Browser code that needs relayer authentication should configure a proxy URL:
 
 ```ts
 const relayer = new RelayerWeb({
@@ -95,11 +95,11 @@ const relayer = new RelayerWeb({
 });
 ```
 
-proxy 负责把请求转发到实际 relayer endpoint，并在服务端注入私有 credentials。
+The proxy forwards requests to the actual relayer endpoint and injects private credentials on the server.
 
 ## Node Transport
 
-服务端代码可以读取私有环境变量：
+Server-side code can read private environment variables:
 
 ```ts
 const relayer = new RelayerNode({
@@ -114,18 +114,18 @@ const relayer = new RelayerNode({
 });
 ```
 
-这种写法只用于服务端。RPC URL、relayer URL、private key、mnemonic、API key 都应按环境管理。
+Use this pattern only on the server. RPC URLs, relayer URLs, private keys, mnemonics, and API keys should all be managed per environment.
 
-## 认证
+## Authentication
 
-官方文档描述了两种认证策略：
+The official documentation describes two authentication strategies:
 
-| 策略 | 使用场景 | secret 位置 |
+| Strategy | Use Case | Secret Location |
 | --- | --- | --- |
-| Backend proxy | browser apps 和 dApps | 只在服务端 |
-| Direct API key | Node scripts、backend services、prototyping | transport `auth` 字段 |
+| Backend proxy | Browser apps and dApps | Server only |
+| Direct API key | Node scripts, backend services, prototyping | Transport `auth` field |
 
-Browser app 不应在前端 runtime config 中包含 `auth`。把 `relayerUrl` 指向同源或可信后端 endpoint：
+A browser app should not include `auth` in frontend runtime config. Point `relayerUrl` at a same-origin or trusted backend endpoint:
 
 ```ts
 const relayer = new RelayerWeb({
@@ -140,38 +140,38 @@ const relayer = new RelayerWeb({
 });
 ```
 
-服务端代码可以传：
+Server-side code can pass:
 
 ```ts
 auth: { __type: "ApiKeyHeader", value: process.env.RELAYER_API_KEY! }
 ```
 
-支持的 auth shape：
+Supported auth shapes:
 
-| 方法 | 形态 | Header 或 transport 行为 |
+| Method | Shape | Header or Transport Behavior |
 | --- | --- | --- |
-| `ApiKeyHeader` | `{ __type: "ApiKeyHeader", value: "key" }` | 发送 `x-api-key` |
-| `ApiKeyCookie` | `{ __type: "ApiKeyCookie", value: "key" }` | 设置 cookie |
-| `BearerToken` | `{ __type: "BearerToken", token: "jwt" }` | 发送 `Authorization: Bearer ...` |
+| `ApiKeyHeader` | `{ __type: "ApiKeyHeader", value: "key" }` | Sends `x-api-key` |
+| `ApiKeyCookie` | `{ __type: "ApiKeyCookie", value: "key" }` | Sets a cookie |
+| `BearerToken` | `{ __type: "BearerToken", token: "jwt" }` | Sends `Authorization: Bearer ...` |
 
-使用 browser proxy 时，如果应用有登录态或 state-changing proxy 行为，应加入 CSRF protection。
+When using a browser proxy, add CSRF protection if the application has login state or state-changing proxy behavior.
 
-## Relayer API Key 获取与托管方式
+## Relayer API Key Acquisition and Hosting
 
-上游文档把 relayer 接入分成两类：
+The upstream documentation divides relayer integration into two categories:
 
-| 方式 | 适用场景 | 注意 |
+| Mode | Suitable For | Notes |
 | --- | --- | --- |
-| Zama-hosted Relayer | mainnet/testnet 应用，不想自运维 relayer | 需要申请 API key，并按用量/协议计费 |
-| Self-hosted Relayer | 对运维、计费、gateway wallet 有独立要求 | 需要自己部署、监控和维护 relayer |
+| Zama-hosted Relayer | Mainnet/testnet applications that do not want to operate their own relayer | Requires applying for an API key and is billed according to usage/protocol rules |
+| Self-hosted Relayer | Teams with independent operations, billing, or gateway wallet requirements | Requires deploying, monitoring, and maintaining the relayer yourself |
 
-拿到 Zama-hosted key 后，仍然按上一节选择 browser proxy 或 server-side direct key。不要把申请到的 key 放进 `NEXT_PUBLIC_`、`VITE_` 或任何前端 bundle。
+After receiving a Zama-hosted key, still choose either a browser proxy or a server-side direct key as described above. Do not put the issued key into `NEXT_PUBLIC_`, `VITE_`, or any frontend bundle.
 
-如果怀疑 key 泄漏，应停止使用该 key，轮换配置，并联系 Zama support。
+If you suspect the key has leaked, stop using it, rotate the configuration, and contact Zama support.
 
-## 多链配置
+## Multi-Chain Configuration
 
-每条支持的链提供一个 transport：
+Provide one transport per supported chain:
 
 ```ts
 const relayer = new RelayerWeb({
@@ -191,22 +191,22 @@ const relayer = new RelayerWeb({
 });
 ```
 
-UI 中要显式展示 chain selection。不要跨链静默复用 handles、credentials 或 contract addresses。
+Show chain selection explicitly in the UI. Do not silently reuse handles, credentials, or contract addresses across chains.
 
-## Signer 选择
+## Signer Selection
 
-| Signer | Import | 用途 |
+| Signer | Import | Purpose |
 | --- | --- | --- |
-| `WagmiSigner` | `@zama-fhe/react-sdk/wagmi` | 使用 wagmi 的 React app |
+| `WagmiSigner` | `@zama-fhe/react-sdk/wagmi` | React app using wagmi |
 | `ViemSigner` | `@zama-fhe/sdk/viem` | viem wallet/public clients |
 | `EthersSigner` | `@zama-fhe/sdk/ethers` | ethers v6 signer/provider |
-| 自定义 `GenericSigner` | 项目代码 | smart wallet 或自定义 transport |
+| Custom `GenericSigner` | Project code | Smart wallet or custom transport |
 
-Signer 需要提供 chain id、account address、typed-data signatures、contract reads/writes、transaction receipt waiting、block timestamp reads。如果 signer 能发出 account/chain 变化事件，实现 `subscribe`，让 SDK 状态可以安全重置。
+The signer must provide chain id, account address, typed-data signatures, contract reads/writes, transaction receipt waiting, and block timestamp reads. If the signer can emit account/chain change events, implement `subscribe` so the SDK can reset state safely.
 
-### Wagmi adapter fallback
+### Wagmi Adapter Fallback
 
-`WagmiSigner` 是首选，但它依赖 SDK 和 wagmi 的内部 action export 兼容。遇到 bundle-time export mismatch 时，用项目本地 signer 实现 `GenericSigner`：
+`WagmiSigner` is preferred, but it depends on compatibility between the SDK and wagmi's internal action exports. When you hit a bundle-time export mismatch, implement a local `GenericSigner`:
 
 ```ts
 import type { EIP712TypedData, GenericSigner } from "@zama-fhe/sdk";
@@ -248,29 +248,29 @@ export function createWagmiGenericSigner(config: Config): GenericSigner {
 }
 ```
 
-这个 fallback 刻意省略 `subscribe`。如果你的钱包栈能可靠监听 disconnect、account change 和 chain change，再补上 `subscribe(callbacks)`，并在事件里调用对应 callback；否则在钱包生命周期事件中手动 `sdk.revokeSession()` 和刷新 query。
+This fallback intentionally omits `subscribe`. If your wallet stack can reliably listen for disconnect, account change, and chain change events, add `subscribe(callbacks)` and call the corresponding callback from those events; otherwise manually call `sdk.revokeSession()` and refresh queries from wallet lifecycle events.
 
-## Storage 选择
+## Storage Selection
 
-| Storage | 导入 | 用途 |
+| Storage | Import | Purpose |
 | --- | --- | --- |
-| `indexedDBStorage` | `@zama-fhe/sdk` | browser 持久化 keypair/session/decrypt cache |
-| `memoryStorage` | `@zama-fhe/sdk` | scripts、tests、短生命周期 session |
+| `indexedDBStorage` | `@zama-fhe/sdk` | Browser-persisted keypair/session/decrypt cache |
+| `memoryStorage` | `@zama-fhe/sdk` | Scripts, tests, short-lived sessions |
 | `chromeSessionStorage` | `@zama-fhe/sdk` | Chrome extension session storage |
 | `asyncLocalStorage` | `@zama-fhe/sdk/node` | Node request-scoped storage |
 
-Browser app 通常使用 `indexedDBStorage`。CLI task 通常使用 `memoryStorage`。多用户服务器需要 request isolation。
+Browser apps usually use `indexedDBStorage`. CLI tasks usually use `memoryStorage`. Multi-user servers need request isolation.
 
 ## FHE Artifact Cache
 
-`RelayerWeb` 和 `RelayerNode` 会缓存多 MB 的 FHE public keys 和参数。
+`RelayerWeb` and `RelayerNode` cache multi-MB FHE public keys and parameters.
 
-| Runtime | 默认 cache 行为 |
+| Runtime | Default Cache Behavior |
 | --- | --- |
-| `RelayerWeb` | IndexedDB，跨 reload 持久化 |
-| `RelayerNode` | 内存，进程重启后丢失 |
+| `RelayerWeb` | IndexedDB, persisted across reloads |
+| `RelayerNode` | In memory, lost after process restart |
 
-cache 会定期重新验证 artifact source。可通过以下选项调整：
+The cache periodically revalidates the artifact source. Configure it with the following options:
 
 ```ts
 const relayer = new RelayerWeb({
@@ -281,11 +281,11 @@ const relayer = new RelayerWeb({
 });
 ```
 
-只有当项目明确需要自定义持久化或隔离策略时，才使用 custom artifact storage。
+Use custom artifact storage only when the project explicitly needs a custom persistence or isolation strategy.
 
 ## Web Extension
 
-Chrome MV3 extension 可能需要单独的 session storage，因为 service worker 可能随时被终止：
+A Chrome MV3 extension may need separate session storage because the service worker can be terminated at any time:
 
 ```ts
 import {
@@ -304,11 +304,11 @@ const sdk = new ZamaSDK({
 });
 ```
 
-extension manifest 需要 `storage` permission。
+The extension manifest needs the `storage` permission.
 
-## Registry 覆盖配置
+## Registry Overrides
 
-如果某条链没有 SDK 默认 registry address，显式提供：
+If a chain does not have an SDK default registry address, provide one explicitly:
 
 ```ts
 const sdk = new ZamaSDK({
@@ -321,23 +321,23 @@ const sdk = new ZamaSDK({
 });
 ```
 
-这会影响 confidential token wrapper discovery 和 registry helpers。
+This affects confidential token wrapper discovery and registry helpers.
 
-## SSR 和 Client 边界
+## SSR and Client Boundaries
 
-Next.js 等框架的规则：
+Rules for frameworks such as Next.js:
 
-- 使用 `@zama-fhe/react-sdk` 的组件必须是 client component
-- 不要在 server component 中 import hooks 或 `ZamaProvider`
-- 不要在 server-only module 里创建 `RelayerWeb`
-- 避免在 server/client 共享模块中实例化 browser SDK 代码
-- provider wiring 放在专门的 `"use client"` 文件里
+- Components that use `@zama-fhe/react-sdk` must be client components.
+- Do not import hooks or `ZamaProvider` in server components.
+- Do not create `RelayerWeb` inside server-only modules.
+- Avoid instantiating browser SDK code in modules shared by server and client code.
+- Put provider wiring in a dedicated `"use client"` file.
 
-如果页面同时需要 server data 和 SDK 交互，把它拆成 server shell 和 client child component。
+If a page needs both server data and SDK interactions, split it into a server shell and a client child component.
 
-## 生命周期和清理
+## Lifecycle and Cleanup
 
-使用：
+Use:
 
 ```ts
 await sdk.revokeSession();
@@ -345,21 +345,21 @@ sdk.dispose();
 sdk.terminate();
 ```
 
-- `revokeSession` 清理 session signature 和当前 requester 的 decrypt cache。
-- `dispose` 移除 signer lifecycle subscriptions。
-- `terminate` 还会关闭 relayer runtime worker 或 pool。
+- `revokeSession` clears the session signature and decrypt cache for the current requester.
+- `dispose` removes signer lifecycle subscriptions.
+- `terminate` also shuts down the relayer runtime worker or pool.
 
-React `ZamaProvider` unmount 时会 dispose 它创建的 SDK。如果 relayer instance 是调用方在 provider 外部创建并持有的，是否 terminate 需要调用方单独决定。
+When a React `ZamaProvider` unmounts, it disposes the SDK instance it created. If the caller created and owns the relayer instance outside the provider, the caller must decide whether to terminate it separately.
 
-## TTLs 和事件
+## TTLs and Events
 
-有意识地配置 decrypt keypair 和 session signature 生命周期。源码默认值如下：
+Configure decrypt keypair and session signature lifetimes deliberately. Source defaults are:
 
-| 选项 | 默认值 | 边界 |
+| Option | Default | Boundary |
 | --- | --- | --- |
-| `keypairTTL` | `2592000` 秒，30 天 | 必须大于 0；超过 365 天会被 capped |
-| `sessionTTL` | `2592000` 秒，30 天 | `0` 表示每次都签名；core `ZamaSDKConfig` 支持 `"infinite"` |
-| `registryTTL` | `86400` 秒，24 小时 | 影响 registry lookup cache |
+| `keypairTTL` | `2592000` seconds, 30 days | Must be greater than 0; values above 365 days are capped |
+| `sessionTTL` | `2592000` seconds, 30 days | `0` means sign every time; core `ZamaSDKConfig` supports `"infinite"` |
+| `registryTTL` | `86400` seconds, 24 hours | Affects registry lookup cache |
 
 ```ts
 const sdk = new ZamaSDK({
@@ -374,10 +374,10 @@ const sdk = new ZamaSDK({
 });
 ```
 
-设置 `sessionTTL: 0` 会禁用 session caching，所有需要 session signature 的操作都会触发钱包签名。只有产品明确需要这种行为时才这样做。
+Setting `sessionTTL: 0` disables session caching, so every operation that needs a session signature will trigger a wallet signature. Do this only when the product explicitly requires it.
 
-Core `ZamaSDKConfig` 支持 `sessionTTL: "infinite"`，表示 session signature 不主动过期。它适合受控环境或 extension/service 场景，但 keypair 仍然受 `keypairTTL` 约束。当前 React `ZamaProviderProps` 的发布类型仍是 `sessionTTL?: number`；在 Provider props 上直接传 `"infinite"` 前，先检查本地 `node_modules/@zama-fhe/react-sdk/dist/index.d.ts` 是否已支持。
+Core `ZamaSDKConfig` supports `sessionTTL: "infinite"`, meaning the session signature does not actively expire. This fits controlled environments or extension/service scenarios, but the keypair is still constrained by `keypairTTL`. The currently published React `ZamaProviderProps` type is still `sessionTTL?: number`; before passing `"infinite"` directly to Provider props, check whether the local `node_modules/@zama-fhe/react-sdk/dist/index.d.ts` supports it.
 
-如果数值型 `sessionTTL` 大于 `keypairTTL`，SDK 会把它 clamp 到 `keypairTTL`，避免 `isAllowed()` 仍为 true 但 keypair 已经过期。
+If a numeric `sessionTTL` is greater than `keypairTTL`, the SDK clamps it to `keypairTTL` so `isAllowed()` does not remain true after the keypair has expired.
 
-更完整的 session/security 细节见 `session-security.md`。
+See `session-security.md` for more complete session/security details.
