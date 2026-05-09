@@ -1,28 +1,28 @@
 # KMSDecryptionProofHelper API
 
-`KMSDecryptionProofHelper` 是 public decrypt proof 背后的底层工具。普通测试优先用：
+`KMSDecryptionProofHelper` is the low-level utility behind public-decrypt proofs. Standard tests should prefer:
 
-- `publicDecrypt(handles)`：同时读取 cleartexts，并检查 public decrypt flag。
-- `buildDecryptionProof(handles, abiEncodedCleartexts)`：只生成指定编码的 proof。
+- `publicDecrypt(handles)`: reads cleartexts and checks the public-decrypt flag.
+- `buildDecryptionProof(handles, abiEncodedCleartexts)`: generates only the proof for the supplied encoding.
 
-只有当你要手动构造 KMS proof 或测试 `KMSVerifier` 本身时，才直接用本 helper。
+Use this helper directly only when you need to manually construct a KMS proof or test `KMSVerifier` itself.
 
-## Mental model
+## Mental Model
 
-KMS proof 证明的是：
+A KMS proof proves:
 
 ```text
-这些 encrypted handles 对应这一段 ABI-encoded cleartext bytes。
+These encrypted handles correspond to these ABI-encoded cleartext bytes.
 ```
 
-所以 digest 绑定的是：
+The digest therefore binds:
 
 - handles list
 - `decryptedResult` bytes
 - extra data
 - KMSVerifier domain
 
-它不表达“业务上是否允许公开”。public decrypt 权限、request id、防重放，要由合约逻辑和测试单独覆盖。
+It does not express whether public disclosure is allowed by the application. Public-decrypt permission, request ids, and replay protection must be covered separately by contract logic and tests.
 
 ## Import
 
@@ -30,23 +30,23 @@ KMS proof 证明的是：
 import {KMSDecryptionProofHelper} from "forge-fhevm/KMSDecryptionProofHelper.sol";
 ```
 
-## 两种常见编码
+## Two Common Encodings
 
-`publicDecrypt(handles)` 使用：
+`publicDecrypt(handles)` uses:
 
 ```solidity
 abi.encode(cleartexts)
 ```
 
-其中 `cleartexts` 是 `uint256[]`。
+where `cleartexts` is a `uint256[]`.
 
-自定义 callback 常常使用业务编码：
+Custom callbacks often use application-specific encoding:
 
 ```solidity
 abi.encode(winner, amount)
 ```
 
-这两种编码不等价。合约用哪一种验证，proof 就必须按哪一种生成。
+These two encodings are not equivalent. The proof must be generated with the same encoding the contract verifies.
 
 ## computeKMSDecryptionDomainSeparator
 
@@ -59,14 +59,14 @@ function computeKMSDecryptionDomainSeparator(
 ) internal pure returns (bytes32);
 ```
 
-通常不要手写 `name` / `version`，而是从当前 `_kmsVerifier.eip712Domain()` 读取：
+Usually, do not hardcode `name` or `version`; read them from the current `_kmsVerifier.eip712Domain()`:
 
 ```solidity
 (, string memory name, string memory version, uint256 chainId, address verifyingContract,,) =
     _kmsVerifier.eip712Domain();
 ```
 
-然后计算 domain separator。
+Then compute the domain separator.
 
 ## computeDecryptionDigest
 
@@ -79,16 +79,16 @@ function computeDecryptionDigest(
 ) internal pure returns (bytes32);
 ```
 
-参数说明：
+Parameters:
 
-| 参数 | 含义 |
+| Parameter | Meaning |
 | --- | --- |
-| `handlesList` | 被解密的 handle 列表，顺序必须稳定 |
+| `handlesList` | Handles being decrypted; order must be stable |
 | `decryptedResult` | ABI-encoded cleartext bytes |
-| `extraData` | 默认通常是 `hex"00"` |
-| `domainSeparator` | 当前 KMSVerifier 的 EIP-712 domain |
+| `extraData` | Usually `hex"00"` by default |
+| `domainSeparator` | Current KMSVerifier EIP-712 domain |
 
-如果 handles 顺序变了、`decryptedResult` 编码变了，原 proof 就不再有效。
+If the handle order changes, or if the `decryptedResult` encoding changes, the original proof is no longer valid.
 
 ## assembleDecryptionProof
 
@@ -99,32 +99,32 @@ function assembleDecryptionProof(
 ) internal pure returns (bytes memory proof);
 ```
 
-wire format：
+Wire format:
 
 ```text
 [sigCount:1][signatures...][extraData]
 ```
 
-每个签名是 65 bytes：
+Each signature is 65 bytes:
 
 ```text
 r || s || v
 ```
 
-`FhevmTest` 默认只用一个 mock KMS signer。
+`FhevmTest` uses one mock KMS signer by default.
 
-## 什么时候用 publicDecrypt，什么时候用 buildDecryptionProof
+## When to Use publicDecrypt vs buildDecryptionProof
 
-用 `publicDecrypt`：
+Use `publicDecrypt`:
 
 ```solidity
 (uint256[] memory cleartexts, bytes memory proof) = publicDecrypt(handles);
 contract.verify(handles, abi.encode(cleartexts), proof);
 ```
 
-前提：合约验证的就是 `abi.encode(uint256[])`。
+Prerequisite: the contract verifies `abi.encode(uint256[])`.
 
-用 `buildDecryptionProof`：
+Use `buildDecryptionProof`:
 
 ```solidity
 bytes memory encoded = abi.encode(winner, amount);
@@ -132,11 +132,11 @@ bytes memory proof = buildDecryptionProof(handles, encoded);
 contract.finalize(handles, encoded, proof);
 ```
 
-前提：合约验证的是自定义业务编码。
+Prerequisite: the contract verifies custom application encoding.
 
-## 常见错误
+## Common Errors
 
-- 用 `publicDecrypt` 得到 proof，却在合约里按 `abi.encode(clear0, clear1)` 验证。
-- handles 顺序和 cleartext 编码顺序不一致。
-- 只验证了 KMS proof，却没测试 request id、expected handles、deadline、replay protection。
-- 把 `buildDecryptionProof` 当成 public decrypt 权限检查；它不检查 ACL。
+- Using a proof returned by `publicDecrypt` while the contract verifies `abi.encode(clear0, clear1)`.
+- Mismatching the handle order and cleartext encoding order.
+- Verifying only the KMS proof without testing request id, expected handles, deadline, or replay protection.
+- Treating `buildDecryptionProof` as a public-decrypt permission check; it does not check ACL.

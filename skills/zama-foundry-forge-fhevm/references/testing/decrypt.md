@@ -1,15 +1,15 @@
-# 测试 decrypt
+# Testing Decrypt
 
-FHEVM 里“解密”不是一件事，而是几种不同测试目的。先选路径：
+In FHEVM, "decryption" is not a single test objective. Choose the path first:
 
-| 你想证明什么 | 用什么 | 是否检查 ACL |
+| What you want to prove | Use | Checks ACL? |
 | --- | --- | --- |
-| encrypted 计算结果对不对 | `decrypt(value)` | 不检查 |
-| 结果可以公开且 KMS proof 能验证 | `publicDecrypt(handles)` | 检查 public decrypt flag |
-| 自定义 callback/finalize proof 编码正确 | `buildDecryptionProof(handles, encoded)` | 不检查 |
-| 某个用户能读取自己的 handle | `signUserDecrypt` + `userDecrypt` | 检查 persistent ACL 和签名 |
+| Encrypted computation result is correct | `decrypt(value)` | No |
+| A result can be public and the KMS proof verifies | `publicDecrypt(handles)` | Checks the public-decrypt flag |
+| Custom callback/finalize proof encoding is correct | `buildDecryptionProof(handles, encoded)` | No |
+| A specific user can read their own handle | `signUserDecrypt` + `userDecrypt` | Checks persistent ACL and signature |
 
-## Direct decrypt：只测计算结果
+## Direct Decrypt: Test Only Computation Results
 
 ```solidity
 function test_deposit_updatesBalance() public {
@@ -20,16 +20,16 @@ function test_deposit_updatesBalance() public {
 }
 ```
 
-`decrypt` 是测试后门。它读取 `forge-fhevm` 的本地 plaintext DB，不检查：
+`decrypt` is a test backdoor. It reads the local plaintext database maintained by `forge-fhevm` and does not check:
 
 - `FHE.allowThis`
 - `FHE.allow(user)`
-- public decrypt flag
+- public-decrypt flag
 - user signature
 
-所以 direct decrypt 适合作为第一层快速测试，但不能作为权限测试的替代。
+Direct decrypt is therefore a good first-layer quick test, but it is not a substitute for permission tests.
 
-typed overloads：
+Typed overloads:
 
 ```solidity
 bool clearBool = decrypt(encryptedBool);
@@ -42,9 +42,9 @@ uint256 clear256 = decrypt(encryptedUint256);
 address clearAddress = decrypt(encryptedAddress);
 ```
 
-## Public decrypt：测公开结果
+## Public Decrypt: Test Public Results
 
-业务合约通常先标记某个结果可以公开：
+Application contracts usually mark a result as publicly decryptable first:
 
 ```solidity
 function allowBalanceForPublicDecrypt(address account) external {
@@ -52,7 +52,7 @@ function allowBalanceForPublicDecrypt(address account) external {
 }
 ```
 
-如果合约还要链上验证 KMS proof：
+If the contract also verifies the KMS proof on-chain:
 
 ```solidity
 function verifyPublicDecrypt(
@@ -64,7 +64,7 @@ function verifyPublicDecrypt(
 }
 ```
 
-测试：
+Test:
 
 ```solidity
 function test_publicDecrypt_balance() public {
@@ -82,14 +82,14 @@ function test_publicDecrypt_balance() public {
 }
 ```
 
-`publicDecrypt` 的重要细节：
+Important details of `publicDecrypt`:
 
-- 它要求每个 handle 已经被标记为 public decryptable。
-- 它返回 `uint256[] cleartexts`。
-- proof 是针对 `abi.encode(cleartexts)` 生成的。
-- handles 顺序和 cleartexts 顺序必须一致。
+- Every handle must already be marked as public decryptable.
+- It returns `uint256[] cleartexts`.
+- The proof is generated for `abi.encode(cleartexts)`.
+- Handle order and cleartext order must match.
 
-未标记时应失败：
+It should fail before a handle is marked:
 
 ```solidity
 function test_publicDecrypt_revertsWithoutPublicFlag() public {
@@ -111,19 +111,19 @@ function callPublicDecrypt(bytes32[] memory handles)
 }
 ```
 
-`publicDecrypt` 是 internal；用 external wrapper 更容易捕捉 revert selector。
+`publicDecrypt` is internal; an external wrapper makes it easier to catch the revert selector.
 
-## buildDecryptionProof：测自定义 callback 编码
+## buildDecryptionProof: Test Custom Callback Encoding
 
-如果合约 callback 验证的不是 `abi.encode(uint256[])`，不要直接复用 `publicDecrypt` 的 proof。
+If the contract callback verifies something other than `abi.encode(uint256[])`, do not reuse the proof from `publicDecrypt`.
 
-例如合约想验证：
+For example, if the contract wants to verify:
 
 ```solidity
 abi.encode(winner, amount)
 ```
 
-测试应使用：
+the test should use:
 
 ```solidity
 bytes32[] memory handles = new bytes32[](2);
@@ -136,23 +136,23 @@ bytes memory proof = buildDecryptionProof(handles, encoded);
 auction.finalize(handles, encoded, proof);
 ```
 
-`buildDecryptionProof` 只生成 proof，不检查 ACL，也不证明业务上允许公开。callback 测试还要覆盖：
+`buildDecryptionProof` only generates a proof. It does not check ACL and does not prove that public disclosure is allowed by the application. Callback tests should also cover:
 
-- request id 是否匹配。
-- expected handles 是否匹配。
-- finalize 是否只能执行一次。
-- caller、deadline、状态机是否正确。
+- Whether the request id matches.
+- Whether the expected handles match.
+- Whether finalize can execute only once.
+- Whether caller, deadline, and state machine checks are correct.
 
-## User decrypt：测用户真实读取路径
+## User Decrypt: Test the Real User Read Path
 
-合约侧需要给 handle 两种 persistent ACL：
+The contract side must grant two persistent ACL entries for the handle:
 
 ```solidity
 FHE.allowThis(value);
 FHE.allow(value, user);
 ```
 
-测试：
+Test:
 
 ```solidity
 function test_userDecrypt_balance() public {
@@ -172,23 +172,23 @@ function test_userDecrypt_balance() public {
 }
 ```
 
-这个测试证明：
+This test proves:
 
-- 用户对 handle 有 persistent ACL。
-- 合约自身对 handle 有 persistent ACL。
-- 签名 user 和 `userDecrypt` 传入的 user 一致。
-- 签名授权的 contract 和 `userDecrypt` 传入的 contract 一致。
+- The user has persistent ACL on the handle.
+- The contract itself has persistent ACL on the handle.
+- The signature user matches the user passed to `userDecrypt`.
+- The contract authorized by the signature matches the contract passed to `userDecrypt`.
 
-## User decrypt 失败路径
+## User Decrypt Failure Paths
 
-`userDecrypt` 会检查：
+`userDecrypt` checks:
 
 - `userAddress != contractAddress`
-- user 有 persistent ACL
-- contract 有 persistent ACL
-- signature recover 到 user
+- The user has persistent ACL
+- The contract has persistent ACL
+- The signature recovers to the user
 
-缺少 `allowThis`：
+Missing `allowThis`:
 
 ```solidity
 function test_userDecrypt_revertsWithoutAllowThis() public {
@@ -209,7 +209,7 @@ function test_userDecrypt_revertsWithoutAllowThis() public {
 }
 ```
 
-wrapper：
+Wrapper:
 
 ```solidity
 function callUserDecrypt(bytes32 handle, address user, address contractAddress, bytes memory sig)
@@ -220,10 +220,10 @@ function callUserDecrypt(bytes32 handle, address user, address contractAddress, 
 }
 ```
 
-## 常见误区
+## Common Misconceptions
 
-- `decrypt` 测过了，不代表 `userDecrypt` 会成功。
-- `buildDecryptionProof` 能过，不代表 handle 被允许 public decrypt。
-- `publicDecrypt` 的 proof 默认匹配 `abi.encode(uint256[])`，不匹配自定义 callback 编码。
-- 只给 user `allow`，忘了 `allowThis`。
-- transfer 后只授权 sender，忘了 recipient。
+- Passing `decrypt` does not mean `userDecrypt` will succeed.
+- Passing `buildDecryptionProof` does not mean the handle is allowed for public decrypt.
+- The proof returned by `publicDecrypt` matches `abi.encode(uint256[])` by default, not custom callback encoding.
+- Granting `allow` to the user but forgetting `allowThis`.
+- Authorizing only the sender after a transfer and forgetting the recipient.

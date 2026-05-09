@@ -1,35 +1,35 @@
-# Foundry 项目配置
+# Foundry Project Configuration
 
-核心原则：
+Core principles:
 
-- 默认使用 Soldeer 管理依赖。
-- 不要在 `foundry.toml` 里把 FHE 相关包写成 `latest`；`forge soldeer install` 会把 `latest` 解析成 `@pkg~latest`，部分 Zama 包会安装失败。
-- 先从下面的已验证版本启动；升级时查询 Soldeer registry / git `rev`，再同步 `foundry.toml`、`soldeer.lock` 和 `remappings.txt`。
-- `forge-fhevm` 使用 git URL，并固定到已验证 `rev`。
-- Solidity 编译器版本必须不低于 `0.8.27`。
-- EVM 版本必须不低于 `cancun`。
-- 不能使用 Soldeer 时，再使用 git submodule fallback。
+- Use Soldeer for dependency management by default.
+- Do not write FHE-related packages as `latest` in `foundry.toml`; `forge soldeer install` resolves `latest` as `@pkg~latest`, which can fail for some Zama packages.
+- Start from the verified versions below; when upgrading, query the Soldeer registry or the git `rev`, then update `foundry.toml`, `soldeer.lock`, and `remappings.txt` together.
+- Install `forge-fhevm` from its git URL and pin it to a verified `rev`.
+- The Solidity compiler version must be at least `0.8.27`.
+- The EVM version must be at least `cancun`.
+- Use the git submodule fallback only when Soldeer cannot be used.
 
-## 已验证版本
+## Verified Versions
 
-优先用这组版本让项目先跑通：
+Prefer this version set to get the project running first:
 
-| 依赖 | 版本 |
+| Dependency | Version |
 | --- | --- |
 | `forge-std` | `1.16.0` |
 | `@fhevm-solidity` | `0.11.1` |
 | `@encrypted-types` | `0.0.4` |
-| `forge-fhevm` | git `60864a00bc7f5361c9026d80ca34e40687a6d2d2`，version label `60864a0` |
+| `forge-fhevm` | git `60864a00bc7f5361c9026d80ca34e40687a6d2d2`, version label `60864a0` |
 
-如果任务明确要求 ERC7984 或 OpenZeppelin confidential contracts，再额外加入对应依赖；普通 counter、vault、auction 这类自定义 encrypted state 通常不需要 OpenZeppelin confidential contracts。
+If the task explicitly requires ERC7984 or OpenZeppelin confidential contracts, add the corresponding dependencies as well. Standard custom encrypted-state contracts such as counters, vaults, and auctions usually do not need OpenZeppelin confidential contracts.
 
-更新 `forge-fhevm` 时，先刷新 git dependency 的 `rev`：
+When updating `forge-fhevm`, refresh the git dependency `rev` first:
 
 ```bash
 git ls-remote https://github.com/zama-ai/forge-fhevm HEAD
 ```
 
-## 推荐 foundry.toml
+## Recommended foundry.toml
 
 ```toml
 [profile.default]
@@ -62,15 +62,15 @@ remappings_version = false
 recursive_deps = true
 ```
 
-说明：
+Notes:
 
-- `solc = "0.8.27"` 是最低推荐值。已有项目可以使用更新编译器，但不要低于 `0.8.27`。
-- `evm_version = "cancun"` 是最低推荐 EVM 版本。已有项目可以使用更新 EVM 版本，但不要低于 `cancun`。
-- `optimizer_runs = 800` 是推荐起点；如果项目已有明确 gas/bytecode 策略，遵循项目配置。
-- 如果部署脚本会用 `vm.writeJson` 或写入 ABI/address 文件，在 `[profile.default]` 增加最小 `fs_permissions`，例如 `{ access = "read-write", path = "./deployments" }` 和前端合约配置目录。
-- 如果项目使用 OpenZeppelin 普通 contracts，显式添加并固定真实版本，不要混用 `latest` 和手写 remapping。
+- `solc = "0.8.27"` is the minimum recommended value. Existing projects may use a newer compiler, but not a version below `0.8.27`.
+- `evm_version = "cancun"` is the minimum recommended EVM version. Existing projects may use a newer EVM version, but not a version below `cancun`.
+- `optimizer_runs = 800` is a recommended starting point; if the project already has a clear gas or bytecode policy, follow the project configuration.
+- If deployment scripts use `vm.writeJson` or write ABI/address files, add the smallest necessary `fs_permissions` entries under `[profile.default]`, for example `{ access = "read-write", path = "./deployments" }` and the frontend contract configuration directory.
+- If the project uses standard OpenZeppelin contracts, add them explicitly and pin real versions. Do not mix `latest` with handwritten remappings.
 
-## 安装命令
+## Installation Commands
 
 ```bash
 forge soldeer install
@@ -78,30 +78,30 @@ forge build
 forge test -vv
 ```
 
-不要优先使用 Foundry 的 git 安装命令直接安装 `zama-ai/forge-fhevm`。它会走 `lib/` 风格依赖布局，容易和 Soldeer 的 `dependencies/`、`soldeer.lock`、版本化 remappings 混在一起。
+Do not default to Foundry's git installation commands for installing `zama-ai/forge-fhevm`. They use the `lib/` dependency layout, which is easy to mix accidentally with Soldeer's `dependencies/`, `soldeer.lock`, and versioned remappings.
 
-## 依赖包作用
+## Dependency Roles
 
-- `forge-std`：Foundry 标准库，提供 `Test`、`Script`、cheatcodes helper。
-- `@fhevm-solidity`：Zama FHEVM Solidity 合约库，提供 `FHE`、`ZamaConfig` 等核心合约 API。
-- `@encrypted-types`：encrypted type 定义，例如 `euint32`、`externalEuint32`。
-- `forge-fhevm`：Foundry-native FHEVM 测试库，提供 `FhevmTest`、加密/解密 helper、本地 cleartext host contracts。
-- `@openzeppelin-contracts`：普通 OpenZeppelin contracts，例如 `Ownable`、`ReentrancyGuard`、ERC721/ERC20 接口。
-- `@openzeppelin-contracts-upgradeable`：OpenZeppelin upgradeable contracts；只在项目需要 upgradeable 模式时保留。
-- `@openzeppelin-confidential-contracts`：OpenZeppelin confidential contracts，例如 ERC7984 相关接口和实现。
+- `forge-std`: the Foundry standard library, including `Test`, `Script`, and cheatcode helpers.
+- `@fhevm-solidity`: Zama's FHEVM Solidity contract library, including core contract APIs such as `FHE` and `ZamaConfig`.
+- `@encrypted-types`: encrypted type definitions such as `euint32` and `externalEuint32`.
+- `forge-fhevm`: Foundry-native FHEVM test library, including `FhevmTest`, encryption/decryption helpers, and local cleartext host contracts.
+- `@openzeppelin-contracts`: standard OpenZeppelin contracts, such as `Ownable`, `ReentrancyGuard`, and ERC721/ERC20 interfaces.
+- `@openzeppelin-contracts-upgradeable`: OpenZeppelin upgradeable contracts; keep this only when the project uses an upgradeable pattern.
+- `@openzeppelin-confidential-contracts`: OpenZeppelin confidential contracts, including ERC7984-related interfaces and implementations.
 
-## remappings
+## Remappings
 
-Soldeer 安装后会在 `dependencies/` 下创建带版本标签的目录。不要猜版本后缀；安装后按实际目录写 `remappings.txt`。
+After Soldeer installs dependencies, it creates version-labeled directories under `dependencies/`. Do not guess the version suffixes; write `remappings.txt` from the directories that actually exist after installation.
 
-推荐写法是安装后确认目录：
+The recommended workflow is to inspect the installed directories first:
 
 ```bash
 find dependencies -maxdepth 1 -type d | sort
 forge remappings
 ```
 
-然后按实际目录写 `remappings.txt`。模板如下：
+Then write `remappings.txt` using the actual directory names. Template:
 
 ```text
 @fhevm/host-contracts/=dependencies/forge-fhevm-60864a0/src/fhevm-host/
@@ -111,15 +111,15 @@ forge-fhevm/=dependencies/forge-fhevm-60864a0/src/
 forge-std/=dependencies/forge-std-1.16.0/src
 ```
 
-如果刷新了依赖版本或 git `rev`，同步更新：
+If dependency versions or the git `rev` change, update all of the following together:
 
-- `foundry.toml` 中的 `version` 和 `rev`
+- The `version` and `rev` entries in `foundry.toml`
 - `soldeer.lock`
-- `remappings.txt` 中所有版本化目录路径
+- Every versioned directory path in `remappings.txt`
 
-## 目录结构
+## Directory Structure
 
-推荐：
+Recommended:
 
 ```text
 foundry/
@@ -131,11 +131,11 @@ foundry/
 └── script/
 ```
 
-不要把 `node_modules` 当作 Foundry dependency 源。Foundry 合约依赖应来自 `dependencies/` 或 fallback 的 `lib/`。
+Do not use `node_modules` as a Foundry dependency source. Foundry contract dependencies should come from `dependencies/` or, for the fallback path, `lib/`.
 
-## Git submodule fallback
+## Git Submodule Fallback
 
-只有在项目不能使用 Soldeer 时，才使用 submodule。保持依赖来源一致，不要同一项目里同时维护 `dependencies/forge-fhevm-*` 和 `lib/forge-fhevm`。
+Use submodules only when the project cannot use Soldeer. Keep dependency sources consistent; do not maintain both `dependencies/forge-fhevm-*` and `lib/forge-fhevm` in the same project.
 
 ```bash
 git submodule add https://github.com/zama-ai/forge-fhevm.git lib/forge-fhevm
@@ -146,7 +146,7 @@ git submodule add https://github.com/OpenZeppelin/openzeppelin-confidential-cont
 git submodule update --init --recursive
 ```
 
-submodule 布局下，`foundry.toml` 通常改为：
+With the submodule layout, `foundry.toml` usually changes to:
 
 ```toml
 [profile.default]
@@ -163,7 +163,7 @@ cbor_metadata = false
 bytecode_hash = "none"
 ```
 
-submodule remappings 必须指向真实目录。例如：
+Submodule remappings must point to real directories. For example:
 
 ```text
 forge-fhevm/=lib/forge-fhevm/src/
@@ -174,16 +174,16 @@ forge-std/=lib/forge-std/src/
 @openzeppelin/confidential-contracts/=lib/openzeppelin-confidential-contracts/contracts/
 ```
 
-`@fhevm/solidity` 和 `encrypted-types` 如果没有通过 Soldeer 安装，需要确认是否由 `forge-fhevm` vendored，或单独以 submodule/本地依赖提供。不要照抄 Soldeer 的 `dependencies/...` remapping 到 `lib/` 项目。
+If `@fhevm/solidity` and `encrypted-types` were not installed through Soldeer, confirm whether they are vendored by `forge-fhevm` or provide them separately as submodules/local dependencies. Do not copy Soldeer-style `dependencies/...` remappings into a `lib/` project.
 
-## 编译排查
+## Compilation Troubleshooting
 
-编译错误优先检查：
+Check these first when compilation fails:
 
-- `solc` 是否不低于 `0.8.27`
-- `evm_version` 是否不低于 `cancun`
-- `libs` 是否和依赖目录一致：Soldeer 用 `dependencies`，submodule 用 `lib`
-- `remappings.txt` 里的版本后缀是否真实存在
-- 是否同时混入了 `dependencies/forge-fhevm-*` 和 `lib/forge-fhevm`
-- 是否把 Hardhat `node_modules` import 当作 Foundry remapping
-- `@fhevm/solidity` 和 `encrypted-types` 是否来自兼容版本
+- Whether `solc` is at least `0.8.27`
+- Whether `evm_version` is at least `cancun`
+- Whether `libs` matches the dependency directory: Soldeer uses `dependencies`, submodules use `lib`
+- Whether the version suffixes in `remappings.txt` actually exist
+- Whether both `dependencies/forge-fhevm-*` and `lib/forge-fhevm` have been mixed into the same project
+- Whether Hardhat `node_modules` imports have been treated as Foundry remappings
+- Whether `@fhevm/solidity` and `encrypted-types` come from compatible versions

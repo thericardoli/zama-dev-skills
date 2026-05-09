@@ -1,18 +1,18 @@
-# Fuzz、边界和常见错误
+# Fuzzing, Boundaries, and Common Errors
 
-Fuzz 测试不要只随机跑成功路径。对 FHEVM 合约，fuzz 最有价值的是覆盖：
+Fuzz tests should not randomize only the success path. For FHEVM contracts, fuzzing is most valuable when it covers:
 
-- 定宽整数 wrapping。
-- encrypted comparison + `FHE.select` 的边界。
-- zero/uninitialized handle。
-- 错 user、错 target、错 ACL。
-- public/user decrypt 的失败路径。
+- Fixed-width integer wrapping.
+- Boundaries around encrypted comparisons plus `FHE.select`.
+- Zero/uninitialized handles.
+- Wrong user, wrong target, and wrong ACL.
+- Public/user decrypt failure paths.
 
-## Wrapping 是什么
+## What Wrapping Means
 
-`euint8`、`euint16`、`euint64` 这类 FHE 整数有固定 bit 宽度。结果超出范围时，语义通常和同宽度无符号整数一样按模数回绕。
+FHE integer types such as `euint8`, `euint16`, and `euint64` have fixed bit widths. When a result exceeds the range, semantics usually match same-width unsigned integer wrapping.
 
-例子：
+Examples:
 
 ```text
 euint8: 255 + 1 = 0
@@ -20,7 +20,7 @@ euint8: 250 + 10 = 4
 euint8: 0 - 1 = 255
 ```
 
-所以测试 `euint64` 加法时，expected 也要按 `uint64` 语义算：
+When testing `euint64` addition, compute the expected value with `uint64` semantics:
 
 ```solidity
 uint64 expected;
@@ -29,11 +29,11 @@ unchecked {
 }
 ```
 
-余额、额度、供应量通常不希望业务上发生 wrapping。合约要用 encrypted comparison 和 `FHE.select` 让失败路径保持原状态。
+For balances, allowances, and supply, wrapping is usually not acceptable at the business-logic level. Contracts should use encrypted comparisons and `FHE.select` so failure paths preserve the original state.
 
-## 算术 fuzz
+## Arithmetic Fuzzing
 
-适合测试纯 FHE 运算 helper：
+Good fit for pure FHE arithmetic helpers:
 
 ```solidity
 function test_add_fuzz(uint64 a, uint64 b) public {
@@ -51,18 +51,18 @@ function test_add_fuzz(uint64 a, uint64 b) public {
 }
 ```
 
-这个测试承认 wrapping 是底层运算语义的一部分。
+This test treats wrapping as part of the low-level operation semantics.
 
-## 业务不允许 underflow 时
+## When Business Logic Must Prevent Underflow
 
-转账、提款这类业务不能直接保存 `FHE.sub(balance, amount)`。先比较，再 select：
+Transfers and withdrawals must not directly store `FHE.sub(balance, amount)`. Compare first, then select:
 
 ```solidity
 ebool canSpend = FHE.ge(balance, amount);
 euint64 next = FHE.select(canSpend, FHE.sub(balance, amount), balance);
 ```
 
-测试边界：
+Boundary test:
 
 ```solidity
 function test_transfer_doesNotUnderflow(uint64 balance, uint64 amount) public {
@@ -80,11 +80,11 @@ function test_transfer_doesNotUnderflow(uint64 balance, uint64 amount) public {
 }
 ```
 
-这里断言的是业务语义：余额不足时不扣款、不给 recipient 增加余额。
+This asserts application semantics: insufficient balance does not debit the sender and does not credit the recipient.
 
-## Bool、比较和 select
+## Bool, Comparison, and select
 
-`ebool` 不是 Solidity `bool`，不能拿来写普通 `if`。测试 encrypted 条件时，检查最终 encrypted result：
+`ebool` is not a Solidity `bool`; it cannot be used in a normal `if`. When testing encrypted conditions, assert on the final encrypted result:
 
 ```solidity
 function test_select_fuzz(uint64 balance, uint64 amount) public {
@@ -98,16 +98,16 @@ function test_select_fuzz(uint64 balance, uint64 amount) public {
 }
 ```
 
-## Encrypted input 错误矩阵
+## Encrypted-Input Error Matrix
 
-| 现象 | 典型原因 |
+| Symptom | Typical cause |
 | --- | --- |
-| `FHE.fromExternal` revert | `encrypt*` 的 target 不是实际合约 |
-| 余额写到错误账户 | helper 绑定了 Alice，但交易不是 `vm.prank(alice)` |
-| 多输入 proof 失败 | 把 Hardhat input builder 模式搬到当前 Foundry helper |
-| 结果一直是 0 | 没写状态、读了 zero handle，或没有触发 FHE operation |
+| `FHE.fromExternal` reverts | The `encrypt*` target is not the actual contract |
+| Balance is written to the wrong account | Helper binds Alice, but the transaction is not `vm.prank(alice)` |
+| Multi-input proof fails | A Hardhat input-builder pattern was copied into the current Foundry helper flow |
+| Result is always 0 | State was not written, a zero handle was read, or no FHE operation was emitted |
 
-排查：
+Troubleshooting:
 
 ```bash
 rg "function encrypt" dependencies/forge-fhevm-*/src/FhevmTest.sol
@@ -115,16 +115,16 @@ rg "function fromExternal" dependencies/@fhevm-solidity-*/lib/FHE.sol
 forge test -vvv --match-test <name>
 ```
 
-## User decrypt 错误矩阵
+## User-Decrypt Error Matrix
 
-| 错误 | 先查什么 |
+| Error | Check first |
 | --- | --- |
-| `UserAddressEqualsContractAddress()` | 测试是否把 user 和 contract 设成同一地址 |
-| `UserNotAuthorizedForDecrypt(bytes32,address)` | 是否调用 `FHE.allow(value, user)`，是否只有 transient |
-| `ContractNotAuthorizedForDecrypt(bytes32,address)` | 是否调用 `FHE.allowThis(value)` |
-| `InvalidUserDecryptSignature()` | private key、user、contract list、timestamp 是否匹配 |
+| `UserAddressEqualsContractAddress()` | Whether the test set the user and contract to the same address |
+| `UserNotAuthorizedForDecrypt(bytes32,address)` | Whether `FHE.allow(value, user)` was called, and whether only transient permission exists |
+| `ContractNotAuthorizedForDecrypt(bytes32,address)` | Whether `FHE.allowThis(value)` was called |
+| `InvalidUserDecryptSignature()` | Whether private key, user, contract list, and timestamp match |
 
-`userDecrypt` 是 internal。要捕捉 selector，用 wrapper：
+`userDecrypt` is internal. To catch the selector, use a wrapper:
 
 ```solidity
 function callUserDecrypt(bytes32 handle, address user, address contractAddress, bytes memory sig)
@@ -135,56 +135,56 @@ function callUserDecrypt(bytes32 handle, address user, address contractAddress, 
 }
 ```
 
-## Public decrypt 错误矩阵
+## Public-Decrypt Error Matrix
 
-| 现象 | 先查什么 |
+| Symptom | Check first |
 | --- | --- |
-| `HandleNotAllowedForPublicDecryption(bytes32)` | 业务合约是否调用 `FHE.makePubliclyDecryptable` |
-| KMS signature 验证失败 | handles 顺序、ABI 编码、proof 是否匹配 |
-| callback 可重复消费 | finalize 是否记录 request/finalized 状态 |
-| 错结果也能 finalize | 是否绑定 expected handles hash 或 request id |
+| `HandleNotAllowedForPublicDecryption(bytes32)` | Whether the application contract called `FHE.makePubliclyDecryptable` |
+| KMS signature verification fails | Whether handle order, ABI encoding, and proof match |
+| Callback can be consumed repeatedly | Whether finalize records request/finalized state |
+| Wrong result can still finalize | Whether expected handles hash or request id is bound |
 
-`publicDecrypt(handles)` 的 proof 匹配 `abi.encode(cleartexts)`，其中 `cleartexts` 是 `uint256[]`。如果合约验证的是 `abi.encode(clear0, clear1)`，用 `buildDecryptionProof(handles, encoded)`。
+The proof from `publicDecrypt(handles)` matches `abi.encode(cleartexts)`, where `cleartexts` is a `uint256[]`. If the contract verifies `abi.encode(clear0, clear1)`, use `buildDecryptionProof(handles, encoded)`.
 
-## ACL/FHE 运算错误
+## ACL/FHE Operation Errors
 
-常见来源：
+Common sources:
 
-- 用其他 sender 创建的 handle 做 FHE 运算。
-- 传入伪造或不存在的 `bytes32` handle。
-- enc-enc 运算两侧类型不兼容。
-- 跨合约调用前忘记 `FHE.allowTransient`。
-- 只给旧 handle 授权，新 handle 没有重新授权。
+- Using a handle created by another sender in an FHE operation.
+- Passing a forged or nonexistent `bytes32` handle.
+- Incompatible types on both sides of an encrypted-encrypted operation.
+- Forgetting `FHE.allowTransient` before a cross-contract call.
+- Authorizing only the old handle and not reauthorizing the new handle.
 
-项目测试不必复制 `forge-fhevm` 的 executor 底层测试，但业务暴露出的失败路径要覆盖。
+Project tests do not need to copy the low-level executor tests from `forge-fhevm`, but they should cover the failure paths exposed by the application.
 
-## HCU 深度
+## HCU Depth
 
-上游 `FhevmTest` 提供：
+Upstream `FhevmTest` provides:
 
 ```solidity
 disableHCUDepthLimit();
 ```
 
-它只放宽 sequential HCU depth cap，保留 total per-transaction HCU accounting。仅在测试编排比生产单次调用更深时使用，并在测试名或注释中说明原因。
+This only relaxes the sequential HCU depth cap while preserving total per-transaction HCU accounting. Use it only when the test orchestration is deeper than a production single-call flow, and explain the reason in the test name or a comment.
 
-## ERC7984 / confidential token 辅助
+## ERC7984 / Confidential Token Helper
 
-ERC7984 token 的完整测试路径见 `erc7984.md`。上游 `FhevmTest` 还提供：
+For the full ERC7984 token test path, see `erc7984.md`. Upstream `FhevmTest` also provides:
 
 ```solidity
 dealConfidential(wrapper, user, amount);
 ```
 
-它给 user 分配 wrapper underlying token 并调用 `wrap`，相当于 confidential wrapper 测试里的 `deal`。只在项目使用 OpenZeppelin confidential ERC7984 wrapper 时使用；普通 vault/counter 测试不需要。
+It assigns wrapper underlying tokens to the user and calls `wrap`, acting like `deal` for confidential wrapper tests. Use it only when the project uses the OpenZeppelin confidential ERC7984 wrapper; standard vault/counter tests do not need it.
 
-## 最小检查清单
+## Minimal Checklist
 
-- encrypted input 成功路径。
-- direct decrypt 的计算正确性。
-- user decrypt 成功路径。
-- 错误用户或缺 ACL 的失败路径。
-- public decrypt 标记前后路径。
-- overflow/underflow 或边界值。
-- zero/uninitialized handle。
-- 跨合约 transient ACL。
+- Encrypted-input success path.
+- Correctness of direct-decrypt computation results.
+- User-decrypt success path.
+- Failure paths for wrong users or missing ACL.
+- Public-decrypt paths before and after marking.
+- Overflow/underflow or boundary values.
+- Zero/uninitialized handle.
+- Cross-contract transient ACL.

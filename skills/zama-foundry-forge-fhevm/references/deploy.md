@@ -1,10 +1,10 @@
-# Foundry 部署
+# Foundry Deployment
 
-本文件只讨论“FHEVM dApp 合约如何部署”。`forge-fhevm` 自带的 `deploy-local.sh` / `deploy.sh` 部署的是 cleartext FHEVM host stack，用于本地或私有开发链；不要把它当成 Sepolia/mainnet dApp 部署步骤。
+This file covers only how to deploy FHEVM dApp contracts. The `deploy-local.sh` / `deploy.sh` scripts shipped with `forge-fhevm` deploy a cleartext FHEVM host stack for local or private development chains; do not treat them as Sepolia/mainnet dApp deployment steps.
 
-实际部署时不要把 private key 写进 `.env`、脚本、命令历史或 CI log。dApp 部署应使用 Foundry keystore：用 `cast wallet import` 保存加密 keystore，用 `forge script --account <name>` 选择 signer。
+For real deployments, do not write private keys into `.env` files, scripts, command history, or CI logs. dApp deployment should use the Foundry keystore: store the encrypted keystore with `cast wallet import`, and select the signer with `forge script --account <name>`.
 
-合约应继承 `ZamaEthereumConfig`，由 `@fhevm/solidity` 根据网络配置 FHEVM host contracts：
+Contracts should inherit `ZamaEthereumConfig`, allowing `@fhevm/solidity` to configure FHEVM host contracts for the active network:
 
 ```solidity
 import {FHE, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
@@ -23,9 +23,9 @@ contract ConfidentialVault is ZamaEthereumConfig {
 }
 ```
 
-## Signer / keystore
+## Signer / Keystore
 
-创建或导入部署账户：
+Create or import a deployment account:
 
 ```bash
 cast wallet import zama-sepolia-deployer --interactive
@@ -33,9 +33,9 @@ cast wallet list
 cast wallet address --account zama-sepolia-deployer
 ```
 
-`cast wallet import` 默认把加密 keystore 保存到 `~/.foundry/keystores`。需要要求用户交互式输入 private key 和 keystore password，避免把 private key 写入 shell 历史或 `.env`。
+`cast wallet import` stores the encrypted keystore under `~/.foundry/keystores` by default. Require the user to enter the private key and keystore password interactively, so the private key never lands in shell history or `.env`.
 
-`.env` 只放非私钥配置：
+`.env` should contain only non-secret-key configuration:
 
 ```bash
 SEPOLIA_RPC_URL=https://...
@@ -45,7 +45,7 @@ DEPLOYER_ACCOUNT=zama-sepolia-deployer
 OWNER=0x...
 ```
 
-部署脚本不要读取 private key。让 `forge script` 的 wallet 选项负责签名：
+Deployment scripts should not read a private key. Let the wallet options on `forge script` handle signing:
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -67,59 +67,59 @@ contract DeployConfidentialVault is Script {
 }
 ```
 
-要点：
+Key points:
 
-- 不要写 `uint256 deployerPk = vm.envUint("PRIVATE_KEY")`。
-- 不要用 `vm.startBroadcast(deployerPk)` 读取 env 私钥。
-- 构造函数里的 owner、admin、token、threshold 等参数从 env 读取地址或显式传参，不要默认等于 deployer。
-- 如果需要更高安全级别，mainnet 优先使用硬件钱包、multisig、KMS 或受控签名流程；keystore 适合开发和中低风险部署账户。
+- Do not write `uint256 deployerPk = vm.envUint("PRIVATE_KEY")`.
+- Do not use `vm.startBroadcast(deployerPk)` to read an environment private key.
+- Constructor parameters such as owner, admin, token, and threshold should come from environment addresses or explicit arguments; do not assume they should default to the deployer.
+- For higher security, prefer hardware wallets, multisigs, KMS, or controlled signing workflows on mainnet. Keystores are appropriate for development and lower-to-medium-risk deployment accounts.
 
 ## Local
 
-Local 有两层部署：
+Local deployment has two layers:
 
-1. 把 cleartext FHEVM host contracts 放到本地链的标准地址。
-2. 部署你的 dApp 合约。
+1. Materialize the cleartext FHEVM host contracts at their standard addresses on the local chain.
+2. Deploy your dApp contract.
 
-启动 Anvil：
+Start Anvil:
 
 ```bash
 anvil --host 127.0.0.1 --port 8545 --chain-id 31337
 ```
 
-在另一个终端运行 `forge-fhevm` 的本地 host stack 脚本。Soldeer 项目通常在 `dependencies/forge-fhevm-<version>/deploy-local.sh`，submodule 项目通常在 `lib/forge-fhevm/deploy-local.sh`：
+In another terminal, run the local host-stack script from `forge-fhevm`. Soldeer projects usually place it under `dependencies/forge-fhevm-<version>/deploy-local.sh`; submodule projects usually place it under `lib/forge-fhevm/deploy-local.sh`:
 
 ```bash
 LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545
 ```
 
-`LOCAL_STATE_RPC_NAMESPACE=anvil` 很重要。`deploy-local.sh` 会用 `cast client` 探测本地 RPC 是 Anvil 还是 Hardhat；在某些环境里 `cast client` 输出为空，脚本会报 `could not detect a supported local RPC backend`。如果任务明确只支持 Anvil，本地 wrapper 脚本应直接设置这个环境变量，而不是依赖自动探测。
+`LOCAL_STATE_RPC_NAMESPACE=anvil` is important. `deploy-local.sh` uses `cast client` to detect whether the local RPC is Anvil or Hardhat. In some environments, `cast client` returns an empty value, causing `could not detect a supported local RPC backend`. If the task explicitly supports only Anvil, the local wrapper script should set this environment variable directly instead of relying on auto-detection.
 
-非默认端口：
+Non-default port:
 
 ```bash
 LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8546
 ```
 
-多个本地节点：
+Multiple local nodes:
 
 ```bash
 LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545 --anvil-port 8546
 ```
 
-复用已 build artifacts：
+Reuse already built artifacts:
 
 ```bash
 LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --skip-build --anvil-port 8545
 ```
 
-fish shell 不能使用 `NAME=value command` 形式时，用：
+For fish shells that cannot use the `NAME=value command` form:
 
 ```fish
 env LOCAL_STATE_RPC_NAMESPACE=anvil ./dependencies/forge-fhevm-<version>/deploy-local.sh --anvil-port 8545
 ```
 
-如果封装 root-level npm script，推荐用 Node wrapper 查找版本化目录，并把环境变量传给子进程：
+If you wrap this as a root-level npm script, prefer a Node wrapper that finds the versioned directory and passes the environment variable to the child process:
 
 ```js
 import { access, readdir } from "node:fs/promises";
@@ -162,7 +162,7 @@ const result = spawnSync(script, ["--anvil-port", "8545"], {
 process.exit(result.status ?? 1);
 ```
 
-部署 dApp 时仍优先走 keystore。第一次本地调试可以把 Anvil 的公开测试私钥交互式导入一个本地账户：
+When deploying the dApp, still prefer the keystore. For first-pass local debugging, you may import Anvil's public test private key interactively into a local account:
 
 ```bash
 cast wallet import local-anvil --interactive
@@ -174,7 +174,7 @@ forge script script/DeployConfidentialVault.s.sol:DeployConfidentialVault \
   --broadcast
 ```
 
-如果任务要求 disposable local demo 一键跑通，root scripts 可以组合 host stack 和 dApp 部署，并使用 Anvil 默认解锁账户；真实测试网或生产部署仍用 keystore。README 必须明确先启动 Anvil：
+If a task requires a disposable one-command local demo, root scripts may combine host-stack deployment with dApp deployment and use Anvil's default unlocked account. Real testnet or production deployments should still use the keystore. The README must clearly say to start Anvil first:
 
 ```json
 {
@@ -186,7 +186,7 @@ forge script script/DeployConfidentialVault.s.sol:DeployConfidentialVault \
 }
 ```
 
-如果 `DeployLocal.s.sol` 要写入前端地址文件或 `deployments/local.json`，`foundry.toml` 必须允许写入目标目录，否则 `vm.writeJson` 会部署成功后回滚脚本：
+If `DeployLocal.s.sol` writes frontend address files or `deployments/local.json`, `foundry.toml` must permit writes to the target directories. Otherwise `vm.writeJson` can make the script revert after a successful deployment:
 
 ```toml
 [profile.default]
@@ -196,21 +196,21 @@ fs_permissions = [
 ]
 ```
 
-Local 注意事项：
+Local notes:
 
-- `deploy-local.sh` 不需要 `.env`，默认使用 Anvil key、mock gateway、mock KMS/input signer。
-- `set LOCAL_STATE_RPC_NAMESPACE anvil` 在 fish 中只是普通 shell 变量；要传给 npm/Node/bash 子进程，使用 `set -x LOCAL_STATE_RPC_NAMESPACE anvil` 或 `env LOCAL_STATE_RPC_NAMESPACE=anvil npm run deploy:local`。
-- 如果 Anvil 没启动或端口不对，`cast client --rpc-url http://127.0.0.1:8545` 会失败；先修 RPC 可达性，再排查 FHEVM 部署。
-- 它通过本地 RPC 的 `setCode` / `setStorageAt` 把 host contracts materialize 到 `FHEVMHostAddresses.sol` 的固定地址；只适合 Anvil/Hardhat 这类本地节点。
-- 合约测试继承 `FhevmTest` 时不需要先跑 `deploy-local.sh`；`super.setUp()` 会在 Forge 测试环境内部署 host contracts。
-- Anvil 重启会清空链状态；前端里的本地部署地址需要重新生成，不能把一次本地运行的地址当成长期有效配置。
-- 本地 cleartext stack 中 encrypted values 实际以明文跟踪，不能用来证明生产隐私安全。
+- `deploy-local.sh` does not need `.env`; it uses the Anvil key, mock gateway, mock KMS signer, and mock input signer by default.
+- In fish, `set LOCAL_STATE_RPC_NAMESPACE anvil` creates only a regular shell variable. To pass it to npm/Node/bash child processes, use `set -x LOCAL_STATE_RPC_NAMESPACE anvil` or `env LOCAL_STATE_RPC_NAMESPACE=anvil npm run deploy:local`.
+- If Anvil is not running or the port is wrong, `cast client --rpc-url http://127.0.0.1:8545` will fail; fix RPC reachability before debugging FHEVM deployment.
+- The script uses local RPC methods such as `setCode` / `setStorageAt` to materialize host contracts at the fixed addresses in `FHEVMHostAddresses.sol`; this is suitable only for local nodes such as Anvil/Hardhat.
+- Contract tests that inherit `FhevmTest` do not need `deploy-local.sh` to run first; `super.setUp()` deploys the host contracts inside the Forge test environment.
+- Restarting Anvil clears chain state; local deployment addresses used by the frontend must be regenerated and should not be treated as long-lived configuration.
+- In the local cleartext stack, encrypted values are actually tracked in plaintext. It cannot prove production privacy.
 
 ## Sepolia
 
-Sepolia 部署 dApp 时不需要先部署 `forge-fhevm` 的 host stack；使用 Zama 官方 Sepolia FHEVM host contracts 和 relayer 配置。当前官方文档列出的 Sepolia host 地址包括 `FHEVM_EXECUTOR_CONTRACT`、`ACL_CONTRACT`、`HCU_LIMIT_CONTRACT`、`KMS_VERIFIER_CONTRACT`、`INPUT_VERIFIER_CONTRACT`，relayer 为 `https://relayer.testnet.zama.org`，gateway chain id 为 `10901`。
+When deploying a dApp to Sepolia, do not deploy the `forge-fhevm` host stack first. Use Zama's official Sepolia FHEVM host contracts and relayer configuration. Current official documentation lists Sepolia host addresses including `FHEVM_EXECUTOR_CONTRACT`, `ACL_CONTRACT`, `HCU_LIMIT_CONTRACT`, `KMS_VERIFIER_CONTRACT`, and `INPUT_VERIFIER_CONTRACT`; the relayer is `https://relayer.testnet.zama.org`, and the gateway chain id is `10901`.
 
-`.env.sepolia` 示例，不包含 private key：
+Example `.env.sepolia` without a private key:
 
 ```bash
 SEPOLIA_RPC_URL=https://...
@@ -219,7 +219,7 @@ DEPLOYER_ACCOUNT=zama-sepolia-deployer
 OWNER=0x...
 ```
 
-部署：
+Deploy:
 
 ```bash
 source .env.sepolia
@@ -232,19 +232,19 @@ forge script script/DeployConfidentialVault.s.sol:DeployConfidentialVault \
   --etherscan-api-key "$ETHERSCAN_API_KEY"
 ```
 
-Sepolia 注意事项：
+Sepolia notes:
 
-- 确认合约继承 `ZamaEthereumConfig`，并且当前 `@fhevm/solidity` 版本支持 Sepolia。
-- 前端/脚本加密输入时，user、contract、chain id、relayer config 必须与 Sepolia 一致。
-- Sepolia 是测试网；不要放真实敏感数据或资金假设。
-- 不要在 Sepolia 上运行 `forge-fhevm/deploy-local.sh`。`deploy.sh` 只适合你自己部署 cleartext FHEVM stack 的远程开发链，不是接入 Zama Sepolia 的常规步骤。
-- 部署后至少跑一条真实 encrypted input 交易和一次 user decrypt/public decrypt 验证，而不只是 `forge verify-contract`。
+- Confirm that the contract inherits `ZamaEthereumConfig` and that the current `@fhevm/solidity` version supports Sepolia.
+- When frontends/scripts encrypt inputs, user, contract, chain id, and relayer config must all match Sepolia.
+- Sepolia is a testnet; do not rely on it for real sensitive data or production fund assumptions.
+- Do not run `forge-fhevm/deploy-local.sh` on Sepolia. `deploy.sh` is for remote development chains where you deploy your own cleartext FHEVM stack; it is not the standard path for connecting to Zama Sepolia.
+- After deployment, verify at least one real encrypted-input transaction and one user-decrypt/public-decrypt flow, not only `forge verify-contract`.
 
 ## Mainnet
 
-Mainnet dApp 部署脚本与 Sepolia 形式相同，但发布前必须先确认当前官方 `@fhevm/solidity`、Zama SDK、Zama docs 是否已经提供目标 mainnet 的 host contracts、gateway、relayer 与审计状态。若依赖源码或官方文档没有 mainnet 配置，不要硬编码 Sepolia/local 地址冒充 mainnet。
+Mainnet dApp deployment scripts have the same shape as Sepolia scripts, but before release you must confirm that the current official `@fhevm/solidity`, Zama SDK, and Zama docs provide host contracts, gateway, relayer, and audit status for the target mainnet. If dependency source or official docs do not provide mainnet configuration, do not hardcode Sepolia/local addresses and present them as mainnet.
 
-`.env.mainnet` 示例，不包含 private key：
+Example `.env.mainnet` without a private key:
 
 ```bash
 MAINNET_RPC_URL=https://...
@@ -253,7 +253,7 @@ DEPLOYER_ACCOUNT=zama-mainnet-deployer
 OWNER=0x...
 ```
 
-部署：
+Deploy:
 
 ```bash
 source .env.mainnet
@@ -266,17 +266,17 @@ forge script script/DeployConfidentialVault.s.sol:DeployConfidentialVault \
   --etherscan-api-key "$ETHERSCAN_API_KEY"
 ```
 
-Mainnet 注意事项：
+Mainnet notes:
 
-- 优先使用硬件钱包、multisig 或受控 signer 流程；如果使用 keystore，使用专门部署账户并最小化余额。
-- 不要把生产 private key 提交到 `.env`、脚本、shell history 或 CI log。
-- 在 mainnet fork 上演练部署 nonce、constructor 参数、verification、权限初始化和 pause/owner 逻辑。
-- FHEVM 逻辑发布前必须覆盖 ACL 错误路径：错误 user 不能 decrypt、缺少 `allowThis` 会失败、未 public 标记的 handle 不能 public decrypt。
-- 不要部署 `forge-fhevm` cleartext host stack 到 Ethereum mainnet；它是开发工具，且 cleartext executor 不提供生产隐私。
-- 对任何 `FHE.makePubliclyDecryptable` 调用做产品级审查；mainnet 上 public decrypt 是永久公开。
+- Prefer hardware wallets, multisigs, or controlled signer workflows. If using a keystore, use a dedicated deployment account and keep its balance minimal.
+- Do not commit production private keys to `.env`, scripts, shell history, or CI logs.
+- Rehearse deployment nonce, constructor parameters, verification, permission initialization, and pause/owner logic on a mainnet fork.
+- Before releasing FHEVM logic, cover ACL failure paths: wrong users cannot decrypt, missing `allowThis` fails, and handles not marked public cannot be publicly decrypted.
+- Do not deploy the `forge-fhevm` cleartext host stack to Ethereum mainnet. It is a development tool, and the cleartext executor does not provide production privacy.
+- Review every `FHE.makePubliclyDecryptable` call at the product level; public decrypt on mainnet is permanent disclosure.
 
-## 远程 cleartext host stack 仅用于私有开发链
+## Remote Cleartext Host Stack Is Only for Private Development Chains
 
-`forge-fhevm/deploy.sh` 的用途是把 cleartext FHEVM host contracts 部署到 testnets/private chains，并改写 `FHEVMHostAddresses.sol`。只有在你明确要维护自己的 cleartext 开发网络时才使用它。接入 Zama 官方 Sepolia/mainnet 时，部署你的 dApp 合约即可。
+`forge-fhevm/deploy.sh` deploys cleartext FHEVM host contracts to testnets/private chains and rewrites `FHEVMHostAddresses.sol`. Use it only when you explicitly intend to maintain your own cleartext development network. When connecting to Zama's official Sepolia/mainnet, deploy only your dApp contract.
 
-如果确实要跑 `deploy.sh`，按当前安装的 `forge-fhevm/deploy.sh` 读取它需要的变量，但不要把任何 signer private key 写进仓库内 `.env`。这类脚本通常还涉及 KMS/coprocessor mock signer；它们也只应该用于 disposable 私有开发链或安全 secret manager 管理的临时环境。
+If you really need to run `deploy.sh`, inspect the currently installed `forge-fhevm/deploy.sh` for its required variables, but do not write any signer private key into a repository-local `.env`. These scripts typically also involve KMS/coprocessor mock signers; those should only be used for disposable private development chains or short-lived environments managed by a secure secret manager.

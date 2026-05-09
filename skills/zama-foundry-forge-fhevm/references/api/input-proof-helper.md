@@ -1,26 +1,26 @@
 # InputProofHelper API
 
-`InputProofHelper` 是 `encrypt*` 背后的底层工具。普通测试不要直接用它；只有当 `FhevmTest.encryptUint64(value, user, target)` 不够用时才打开本文件。
+`InputProofHelper` is the low-level utility behind the `encrypt*` helpers. Standard tests should not use it directly; open this file only when `FhevmTest.encryptUint64(value, user, target)` is not enough.
 
-典型需要直接用它的情况：
+Typical reasons to use it directly:
 
-- 一份 input proof 里要放多个 handles。
-- 需要控制 `extraData`。
-- 需要测试 `InputVerifier` 本身。
-- 需要和前端/SDK 的 input proof encoding 对齐。
+- A single input proof must contain multiple handles.
+- You need control over `extraData`.
+- You need to test `InputVerifier` itself.
+- You need to match frontend/SDK input-proof encoding exactly.
 
-如果只是给合约函数传一个 encrypted amount，用 `FhevmTest.encryptUint64`。
+If you only need to pass an encrypted amount to a contract function, use `FhevmTest.encryptUint64`.
 
-## Mental model
+## Mental Model
 
-一个 input proof 证明的是：
+An input proof proves:
 
 ```text
-这些 handles 是由某个 input signer 签过的，
-允许某个 user 在某条 chain 上把它们交给某个 contract 消费。
+These handles were signed by an input signer,
+and this user is allowed to submit them to this contract on this chain.
 ```
 
-因此 digest 里会绑定：
+The digest therefore binds:
 
 - handles
 - user address
@@ -29,7 +29,7 @@
 - extra data
 - InputVerifier domain
 
-target 或 user 错了，`FHE.fromExternal` 应该失败。
+If the target or user is wrong, `FHE.fromExternal` should fail.
 
 ## Import
 
@@ -38,15 +38,15 @@ import {InputProofHelper} from "forge-fhevm/InputProofHelper.sol";
 import {FheType} from "@fhevm/host-contracts/contracts/shared/FheType.sol";
 ```
 
-常见地址：
+Common addresses:
 
 ```solidity
 import {aclAdd, inputVerifierAdd} from "@fhevm/host-contracts/addresses/FHEVMHostAddresses.sol";
 ```
 
-## 最常见的底层流程
+## Most Common Low-Level Flow
 
-这基本就是 `FhevmTest._encrypt` 的简化版：
+This is essentially a simplified version of `FhevmTest._encrypt`:
 
 ```solidity
 bytes memory ciphertext = abi.encodePacked(keccak256(abi.encodePacked(value, uint8(FheType.Uint64), nonce)));
@@ -78,7 +78,7 @@ signatures[0] = _signDigest(MOCK_INPUT_SIGNER_PK, digest);
 bytes memory proof = InputProofHelper.assembleInputProof(handles, signatures, hex"00");
 ```
 
-在普通业务测试里，上面这些都由 `encrypt*` 完成。
+For normal application tests, `encrypt*` performs all of this for you.
 
 ## computeInputHandle
 
@@ -92,18 +92,18 @@ function computeInputHandle(
 ) internal pure returns (bytes32 handle);
 ```
 
-它把 mock ciphertext 和上下文压成 FHEVM handle。handle 里会编码：
+It compresses a mock ciphertext and context into an FHEVM handle. The handle encodes:
 
-- `index`：这个 handle 在 proof 里的位置。
-- `chainId`：目标链。
-- `fheType`：`Bool`、`Uint8`、`Uint64` 等。
-- `HANDLE_VERSION`。
+- `index`: the handle's position in the proof.
+- `chainId`: the target chain.
+- `fheType`: `Bool`, `Uint8`, `Uint64`, and so on.
+- `HANDLE_VERSION`.
 
-注意：
+Notes:
 
-- 单 handle proof 用 `index = 0`。
-- 多 handle proof 每个 handle 的 index 应不同，并和 proof 中的 handles 顺序一致。
-- `fheType` 必须和合约调用 `FHE.fromExternal` 时的 external type 对得上。
+- Single-handle proofs use `index = 0`.
+- In multi-handle proofs, each handle should have a distinct index, matching the handle order in the proof.
+- `fheType` must match the external type passed to `FHE.fromExternal`.
 
 ## computeInputVerifierDomainSeparator
 
@@ -114,7 +114,7 @@ function computeInputVerifierDomainSeparator(
 ) internal pure returns (bytes32);
 ```
 
-构造 EIP-712 domain：
+Builds the EIP-712 domain:
 
 ```text
 name = "InputVerification"
@@ -123,7 +123,7 @@ chainId = chainId
 verifyingContract = verifyingContract
 ```
 
-在 `FhevmTest` 里，`verifyingContract` 是 `inputVerifierAdd`。
+In `FhevmTest`, `verifyingContract` is `inputVerifierAdd`.
 
 ## computeInputVerificationDigest
 
@@ -138,18 +138,18 @@ function computeInputVerificationDigest(
 ) internal pure returns (bytes32);
 ```
 
-这个 digest 是 input signer 签名的内容。
+This digest is what the input signer signs.
 
-参数怎么选：
+How to choose parameters:
 
-| 参数 | 通常填什么 | 错了会怎样 |
+| Parameter | Usual value | What happens if it is wrong |
 | --- | --- | --- |
-| `handles` | proof 里所有 input handles | proof 和 handle 对不上 |
-| `userAddress` | 发起 encrypted input 的用户 | user 绑定失败 |
-| `contractAddress` | 调用 `FHE.fromExternal` 的合约 | target 绑定失败 |
-| `contractChainId` | `block.chainid` | chain 绑定失败 |
-| `extraData` | 默认 `hex"00"` | digest 不一致 |
-| `domainSeparator` | input verifier domain | signer domain 不一致 |
+| `handles` | All input handles in the proof | Proof and handle no longer match |
+| `userAddress` | User initiating the encrypted input | User binding fails |
+| `contractAddress` | Contract that calls `FHE.fromExternal` | Target binding fails |
+| `contractChainId` | `block.chainid` | Chain binding fails |
+| `extraData` | Usually `hex"00"` | Digest mismatch |
+| `domainSeparator` | Input verifier domain | Signer domain mismatch |
 
 ## assembleInputProof
 
@@ -161,22 +161,22 @@ function assembleInputProof(
 ) internal pure returns (bytes memory proof);
 ```
 
-wire format：
+Wire format:
 
 ```text
 [handleCount:1][sigCount:1][handles...][signatures...][extraData]
 ```
 
-每个签名是 65 bytes：
+Each signature is 65 bytes:
 
 ```text
 r || s || v
 ```
 
-## 常见错误
+## Common Errors
 
-- `target` 写成测试合约地址，而不是业务合约地址。
-- `userAddress` 和 `vm.prank(user)` 不一致。
-- 多 handle proof 的 index、handles 顺序、合约参数语义错位。
-- `contractChainId` 和 domain chain id 不一致。
-- 直接构造 proof 却忘记把 plaintext 放进测试 plaintext DB。普通测试不要手写这些，优先用 `encrypt*`。
+- Setting `target` to the test contract address instead of the application contract address.
+- `userAddress` not matching `vm.prank(user)`.
+- In multi-handle proofs, mismatching indexes, handle order, or contract parameter semantics.
+- `contractChainId` not matching the domain chain id.
+- Manually constructing a proof but forgetting to insert the plaintext into the test plaintext database. Standard tests should avoid this and use `encrypt*`.

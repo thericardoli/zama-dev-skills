@@ -1,12 +1,12 @@
 # FhevmTest API
 
-`FhevmTest` 是写 Foundry FHEVM 测试时最常用的入口。它做三件事：
+`FhevmTest` is the primary entry point for Foundry FHEVM tests. It does three things:
 
-1. 在 Forge 测试环境里部署 FHEVM host contracts。
-2. 用 mock signer 生成 input proof、KMS proof 和 user decrypt signature。
-3. 跟踪 encrypted handle 对应的明文，方便测试断言。
+1. Deploys the FHEVM host contracts inside the Forge test environment.
+2. Uses mock signers to generate input proofs, KMS proofs, and user-decrypt signatures.
+3. Tracks the plaintext behind encrypted handles so tests can assert on results.
 
-## 最短可用模板
+## Minimal Working Template
 
 ```solidity
 import {FhevmTest} from "forge-fhevm/FhevmTest.sol";
@@ -44,19 +44,19 @@ contract VaultTest is FhevmTest {
 }
 ```
 
-`super.setUp()` 是关键；没有它，测试环境里没有 FHEVM host contracts。
+`super.setUp()` is essential; without it, the FHEVM host contracts are not available in the test environment.
 
-## Helper 选择表
+## Helper Selection Table
 
-| 你想测试什么 | 用哪个 helper | 它检查 ACL 吗 |
+| What you want to test | Helper to use | Does it check ACL? |
 | --- | --- | --- |
-| 把明文测试值变成 encrypted input | `encryptBool` / `encryptUintXX` / `encryptAddress` | input proof 绑定 user 和 target |
-| 快速断言 encrypted 计算结果 | `decrypt` | 不检查 |
-| public decrypt request/callback | `publicDecrypt` | 检查 public decrypt flag |
-| 自定义 callback proof | `buildDecryptionProof` | 不检查 |
-| 用户读取自己被授权的 handle | `signUserDecrypt` + `userDecrypt` | 检查 persistent ACL 和签名 |
-| ERC7984 wrapper 初始余额 | `dealConfidential` | 不适用 |
-| 测试编排导致 HCU 深度过深 | `disableHCUDepthLimit` | 不适用 |
+| Convert plaintext test values into encrypted input | `encryptBool` / `encryptUintXX` / `encryptAddress` | The input proof binds the user and target |
+| Quickly assert encrypted computation results | `decrypt` | No |
+| Public decrypt request/callback flows | `publicDecrypt` | Checks the public-decrypt flag |
+| Custom callback proof encoding | `buildDecryptionProof` | No |
+| A user reading an authorized handle | `signUserDecrypt` + `userDecrypt` | Checks persistent ACL and signature |
+| ERC7984 wrapper initial balances | `dealConfidential` | Not applicable |
+| Test orchestration that exceeds the HCU depth cap | `disableHCUDepthLimit` | Not applicable |
 
 ## setUp
 
@@ -64,14 +64,14 @@ contract VaultTest is FhevmTest {
 function setUp() public virtual;
 ```
 
-`FhevmTest.setUp()` 会：
+`FhevmTest.setUp()`:
 
-- 设置 `block.chainid = 31337`。
-- 部署 `FHEVMExecutor`、`ACL`、`InputVerifier`、`KMSVerifier`。
-- 配置 mock input signer 和 mock KMS signer。
-- 启动 log recording，让 plaintext tracker 能看到 FHE operation events。
+- Sets `block.chainid = 31337`.
+- Deploys `FHEVMExecutor`, `ACL`, `InputVerifier`, and `KMSVerifier`.
+- Configures mock input and KMS signers.
+- Starts log recording so the plaintext tracker can observe FHE operation events.
 
-覆写时先调用：
+Call it first when overriding:
 
 ```solidity
 function setUp() public override {
@@ -80,27 +80,27 @@ function setUp() public override {
 }
 ```
 
-## Encryption helpers
+## Encryption Helpers
 
-所有 `encrypt*` helper 都返回：
+Every `encrypt*` helper returns:
 
 ```solidity
 (externalE*, bytes memory inputProof)
 ```
 
-两参数重载：
+Two-argument overload:
 
 ```solidity
 (externalEuint64 amount, bytes memory proof) = encryptUint64(100, address(vault));
 ```
 
-含义：
+Meaning:
 
 - value: `100`
 - user: `address(this)`
 - target: `address(vault)`
 
-三参数重载适合模拟真实用户：
+The three-argument overload is better for simulating real users:
 
 ```solidity
 uint256 alicePk = 0xA11CE;
@@ -112,9 +112,9 @@ vm.prank(alice);
 vault.deposit(amount, proof);
 ```
 
-支持类型：
+Supported types:
 
-| Helper | 明文类型 | external handle |
+| Helper | Plaintext type | External handle |
 | --- | --- | --- |
 | `encryptBool` | `bool` | `externalEbool` |
 | `encryptUint8` | `uint8` | `externalEuint8` |
@@ -125,43 +125,43 @@ vault.deposit(amount, proof);
 | `encryptUint256` | `uint256` | `externalEuint256` |
 | `encryptAddress` | `address` | `externalEaddress` |
 
-签名：
+Signatures:
 
 ```solidity
 function encryptUint64(uint64 value, address target) internal returns (externalEuint64, bytes memory);
 function encryptUint64(uint64 value, address user, address target) internal returns (externalEuint64, bytes memory);
 ```
 
-其他类型同样是两参数和三参数两种形式。
+Other types follow the same two-argument and three-argument overload pattern.
 
-注意：
+Notes:
 
-- `target` 必须是实际调用 `FHE.fromExternal` 的合约。
-- 多用户测试优先使用三参数重载。
-- 每次 encrypt 都会递增 nonce，同一个值加密两次也会得到不同 handle。
+- `target` must be the contract that actually calls `FHE.fromExternal`.
+- Prefer the three-argument overload for multi-user tests.
+- Every encryption increments the nonce, so encrypting the same value twice still produces different handles.
 
-## Direct decrypt
+## Direct Decrypt
 
 ```solidity
 function decrypt(euint64 value) internal returns (uint64);
 function decrypt(bytes32 handle) internal returns (uint256);
 ```
 
-`decrypt` 是测试断言工具。它不会检查 `FHE.allow`、`FHE.allowThis`、public decrypt flag 或用户签名。
+`decrypt` is a test assertion tool. It does not check `FHE.allow`, `FHE.allowThis`, the public-decrypt flag, or user signatures.
 
-适合：
+Good use:
 
 ```solidity
 assertEq(decrypt(vault.balance()), 100);
 ```
 
-不适合证明：
+It does not prove:
 
-- 用户真的能在产品里解密。
-- handle 已经正确授权。
-- public decrypt callback 安全。
+- That a user can really decrypt in the product.
+- That the handle has been authorized correctly.
+- That a public-decrypt callback is safe.
 
-typed overloads：
+Typed overloads:
 
 ```solidity
 function decrypt(ebool value) internal returns (bool);
@@ -174,7 +174,7 @@ function decrypt(euint256 value) internal returns (uint256);
 function decrypt(eaddress value) internal returns (address);
 ```
 
-## Public decrypt
+## Public Decrypt
 
 ```solidity
 function publicDecrypt(bytes32[] memory handles)
@@ -182,15 +182,15 @@ function publicDecrypt(bytes32[] memory handles)
     returns (uint256[] memory cleartexts, bytes memory decryptionProof);
 ```
 
-`publicDecrypt` 用来测试“结果可以公开，并且 KMS proof 能被合约验证”的流程。
+Use `publicDecrypt` to test that a result is allowed to be public and that the KMS proof can be verified by the contract.
 
-业务合约通常先标记：
+Application contracts usually mark the value first:
 
 ```solidity
 FHE.makePubliclyDecryptable(result);
 ```
 
-测试：
+Test:
 
 ```solidity
 bytes32[] memory handles = new bytes32[](1);
@@ -200,19 +200,19 @@ handles[0] = euint64.unwrap(vault.balance());
 vault.verifyPublicDecrypt(handles, abi.encode(cleartexts), proof);
 ```
 
-行为：
+Behavior:
 
-- 每个 handle 必须已经被 ACL 标记为可 public decrypt。
-- 返回的 `cleartexts` 与 `handles` 顺序一致。
-- proof 是针对 `abi.encode(cleartexts)` 生成的。
+- Every handle must already be marked as public decryptable in the ACL.
+- Returned `cleartexts` are ordered the same way as `handles`.
+- The proof is generated for `abi.encode(cleartexts)`.
 
-未标记时：
+When a handle has not been marked:
 
 ```solidity
 HandleNotAllowedForPublicDecryption(handle)
 ```
 
-如果合约 callback 需要 `abi.encode(clear0, clear1)` 而不是 `abi.encode(uint256[])`，不要用 `publicDecrypt` 的 proof，改用 `buildDecryptionProof`。
+If the contract callback expects `abi.encode(clear0, clear1)` instead of `abi.encode(uint256[])`, do not use the proof returned by `publicDecrypt`; use `buildDecryptionProof` instead.
 
 ## buildDecryptionProof
 
@@ -228,16 +228,16 @@ function buildDecryptionProof(bytes32 handle, bytes memory abiEncodedCleartext)
     returns (bytes memory proof);
 ```
 
-它只做一件事：对你给定的 handles 和 encoded cleartexts 生成 mock KMS proof。
+It does exactly one thing: generate a mock KMS proof for the handles and encoded cleartexts you provide.
 
-它不会：
+It does not:
 
-- 检查 public decrypt flag。
-- 检查 request id。
-- 检查 callback 是否可重复消费。
-- 检查 cleartext 是否来自真实业务授权。
+- Check the public-decrypt flag.
+- Check a request id.
+- Check whether a callback can be consumed more than once.
+- Check whether the cleartext is authorized by application logic.
 
-适合测试自定义 finalize：
+Use it for custom finalize tests:
 
 ```solidity
 bytes32 handle = euint64.unwrap(vault.balance());
@@ -248,16 +248,16 @@ bytes memory proof = buildDecryptionProof(handle, encoded);
 vault.finalize(handle, encoded, proof);
 ```
 
-## User decrypt
+## User Decrypt
 
-user decrypt 由两步组成：
+User decrypt has two steps:
 
 ```solidity
 bytes memory sig = signUserDecrypt(userPk, address(vault));
 uint256 clear = userDecrypt(handle, user, address(vault), sig);
 ```
 
-签名 helper：
+Signature helper:
 
 ```solidity
 function signUserDecrypt(uint256 userPk, address contractAddress)
@@ -273,7 +273,7 @@ function signUserDecrypt(
 ) internal view returns (bytes memory signature);
 ```
 
-解密 helper：
+Decryption helper:
 
 ```solidity
 function userDecrypt(
@@ -284,46 +284,46 @@ function userDecrypt(
 ) internal returns (uint256);
 ```
 
-`userDecrypt` 会检查：
+`userDecrypt` checks:
 
 - `userAddress != contractAddress`
-- user 对 handle 有 persistent ACL
-- contract 对 handle 有 persistent ACL
-- signature recover 到 `userAddress`
+- The user has persistent ACL on the handle
+- The contract has persistent ACL on the handle
+- The signature recovers to `userAddress`
 
-所以合约侧通常必须做：
+Therefore the contract side usually needs:
 
 ```solidity
 FHE.allowThis(value);
 FHE.allow(value, user);
 ```
 
-常见错误：
+Common errors:
 
-| 错误 | 通常原因 |
+| Error | Usual cause |
 | --- | --- |
-| `UserNotAuthorizedForDecrypt` | 缺少 `FHE.allow(value, user)` |
-| `ContractNotAuthorizedForDecrypt` | 缺少 `FHE.allowThis(value)` |
-| `InvalidUserDecryptSignature` | 签名 key、contract list、时间参数或 user 不匹配 |
-| `UserAddressEqualsContractAddress` | user 地址和 contract 地址相同 |
+| `UserNotAuthorizedForDecrypt` | Missing `FHE.allow(value, user)` |
+| `ContractNotAuthorizedForDecrypt` | Missing `FHE.allowThis(value)` |
+| `InvalidUserDecryptSignature` | Signature key, contract list, time parameters, or user do not match |
+| `UserAddressEqualsContractAddress` | User address equals contract address |
 
-## ERC7984/HCU helpers
+## ERC7984/HCU Helpers
 
 ```solidity
 function dealConfidential(IERC7984ERC20Wrapper wrapper, address user, uint256 amount) internal;
 ```
 
-confidential token 版本的 `deal`：给 user underlying token，approve wrapper，然后 wrap 成 confidential token。
+The confidential-token version of `deal`: it gives the user underlying tokens, approves the wrapper, then wraps them into confidential tokens.
 
 ```solidity
 function disableHCUDepthLimit() internal;
 ```
 
-只放宽 sequential HCU depth cap。仅在测试编排比生产单次调用更深时使用，并在测试里说明原因。
+This only relaxes the sequential HCU depth cap. Use it only when the test orchestration is deeper than a production single-call flow, and document the reason in the test.
 
-## 内部状态和常量
+## Internal State and Constants
 
-这些主要用于底层排错，普通业务测试少用：
+These are primarily for low-level debugging; standard application tests rarely need them:
 
 ```solidity
 FHEVMExecutor internal _executor;
@@ -335,7 +335,7 @@ address internal mockInputSigner;
 address internal mockKmsSigner;
 ```
 
-当前源码常量：
+Current source constants:
 
 ```solidity
 uint256 internal constant MOCK_INPUT_SIGNER_PK =

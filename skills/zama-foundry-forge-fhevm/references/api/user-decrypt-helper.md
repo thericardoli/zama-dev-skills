@@ -1,34 +1,34 @@
 # UserDecryptHelper API
 
-`UserDecryptHelper` 是 `signUserDecrypt` 背后的 EIP-712 digest 工具。普通测试不要直接用它；优先用：
+`UserDecryptHelper` is the EIP-712 digest utility behind `signUserDecrypt`. Standard tests should prefer:
 
 ```solidity
 bytes memory sig = signUserDecrypt(userPk, address(vault));
 uint256 clear = userDecrypt(handle, user, address(vault), sig);
 ```
 
-只有在需要手动核验签名、对齐前端签名参数、或测试 user decrypt typed data 时，才直接使用本 helper。
+Use this helper directly only when you need to manually verify signatures, align frontend signing parameters, or test user-decrypt typed data.
 
-## Mental model
+## Mental Model
 
-user decrypt 签名证明的是：
+A user-decrypt signature proves:
 
 ```text
-某个用户允许在某段时间内，
-为某些 contract addresses 发起 user decrypt 请求。
+A user permits user-decrypt requests
+for specific contract addresses during a specific time window.
 ```
 
-它不证明 handle 已授权。handle 权限来自 ACL：
+It does not prove that a handle is authorized. Handle permissions come from ACL:
 
 ```solidity
 FHE.allowThis(value);
 FHE.allow(value, user);
 ```
 
-所以 user decrypt 测试总是两部分：
+Therefore user-decrypt tests always have two parts:
 
-1. 合约业务逻辑正确设置 ACL。
-2. 用户签名和 decrypt request 参数一致。
+1. Contract business logic sets ACL correctly.
+2. The user signature matches the decrypt request parameters.
 
 ## Import
 
@@ -46,7 +46,7 @@ function computeUserDecryptDomainSeparator(
 ) internal pure returns (bytes32);
 ```
 
-构造 EIP-712 domain：
+Builds the EIP-712 domain:
 
 ```text
 name = "Decryption"
@@ -55,7 +55,7 @@ chainId = chainId
 verifyingContract = verifyingContract
 ```
 
-在 `FhevmTest.signUserDecrypt` 中，`verifyingContract` 是 `kmsVerifierAdd`。
+In `FhevmTest.signUserDecrypt`, `verifyingContract` is `kmsVerifierAdd`.
 
 ## computeUserDecryptDigest
 
@@ -70,26 +70,26 @@ function computeUserDecryptDigest(
 ) internal pure returns (bytes32);
 ```
 
-参数说明：
+Parameters:
 
-| 参数 | `FhevmTest` 默认做法 | 含义 |
+| Parameter | `FhevmTest` default | Meaning |
 | --- | --- | --- |
-| `publicKey` | `abi.encodePacked(userAddress)` | user decrypt 请求里的用户标识 |
-| `contractAddresses` | 单合约或多合约数组 | 签名允许哪些合约参与解密 |
-| `startTimestamp` | `block.timestamp` | 签名有效期开始 |
-| `durationDays` | `1` | 有效天数 |
-| `extraData` | `hex"00"` | 额外签名数据 |
+| `publicKey` | `abi.encodePacked(userAddress)` | User identifier in the user-decrypt request |
+| `contractAddresses` | Single-contract or multi-contract array | Contracts the signature authorizes for decryption |
+| `startTimestamp` | `block.timestamp` | Start of the signature validity window |
+| `durationDays` | `1` | Validity duration in days |
+| `extraData` | `hex"00"` | Additional signed data |
 | `domainSeparator` | Decryption domain | KMSVerifier domain |
 
-## signUserDecrypt 内部等价逻辑
+## Internal Equivalent of signUserDecrypt
 
-简单重载：
+Simple overload:
 
 ```solidity
 bytes memory sig = signUserDecrypt(userPk, address(vault));
 ```
 
-等价于：
+Equivalent to:
 
 ```solidity
 address[] memory contracts = new address[](1);
@@ -103,7 +103,7 @@ bytes memory sig = signUserDecrypt(
 );
 ```
 
-完整重载内部大致是：
+The full overload is roughly:
 
 ```solidity
 address userAddress = vm.addr(userPk);
@@ -121,28 +121,28 @@ bytes32 digest = UserDecryptHelper.computeUserDecryptDigest(
 bytes memory signature = abi.encodePacked(r, s, v);
 ```
 
-## userDecrypt 会检查什么
+## What userDecrypt Checks
 
-`userDecrypt(handle, user, contractAddress, signature)` 不只是验签。它还检查 ACL：
+`userDecrypt(handle, user, contractAddress, signature)` does more than verify the signature. It also checks ACL:
 
-- user 不能等于 contract address。
-- user 必须对 handle 有 persistent ACL。
-- contract 必须对 handle 有 persistent ACL。
-- signature 必须 recover 到 user。
+- The user must not equal the contract address.
+- The user must have persistent ACL on the handle.
+- The contract must have persistent ACL on the handle.
+- The signature must recover to the user.
 
-因此这些失败代表不同问题：
+These failures indicate different problems:
 
-| 错误 | 先查什么 |
+| Error | Check first |
 | --- | --- |
-| `UserNotAuthorizedForDecrypt` | 是否调用 `FHE.allow(value, user)` |
-| `ContractNotAuthorizedForDecrypt` | 是否调用 `FHE.allowThis(value)` |
-| `InvalidUserDecryptSignature` | pk、contract list、timestamp、duration、domain 是否一致 |
-| `UserAddressEqualsContractAddress` | 测试地址是否误用了同一个地址 |
+| `UserNotAuthorizedForDecrypt` | Whether `FHE.allow(value, user)` was called |
+| `ContractNotAuthorizedForDecrypt` | Whether `FHE.allowThis(value)` was called |
+| `InvalidUserDecryptSignature` | Whether pk, contract list, timestamp, duration, and domain all match |
+| `UserAddressEqualsContractAddress` | Whether the test accidentally reused the same address |
 
-## 常见错误
+## Common Errors
 
-- 只生成了 signature，却忘记合约里设置 ACL。
-- 用 Bob 的 private key 签名，然后把 Alice 传给 `userDecrypt`。
-- 签名 contract list 里是 `vaultA`，但 `userDecrypt` 传的是 `vaultB`。
-- 用多合约签名时，测试和前端对 `contractAddresses` 顺序或内容不一致。
-- 用当前 block timestamp 签名后，在测试里 `vm.warp`，导致手动 digest 校验和预期不一致。
+- Generating only the signature but forgetting to set ACL in the contract.
+- Signing with Bob's private key, then passing Alice to `userDecrypt`.
+- Signing a contract list that contains `vaultA`, then passing `vaultB` to `userDecrypt`.
+- Using a multi-contract signature while the test and frontend disagree on the order or contents of `contractAddresses`.
+- Signing with the current block timestamp, then calling `vm.warp` in the test, which makes a manually checked digest differ from expectations.

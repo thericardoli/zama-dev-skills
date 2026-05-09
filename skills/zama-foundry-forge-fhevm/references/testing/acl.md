@@ -1,27 +1,27 @@
-# 测试 ACL
+# Testing ACL
 
-ACL 测试回答的问题是：
+ACL tests answer this question:
 
 ```text
-这个 encrypted handle，谁能继续参与链上计算，谁能 user decrypt，谁能 public decrypt？
+For this encrypted handle, who can continue using it in on-chain computation, who can user-decrypt it, and who can public-decrypt it?
 ```
 
-`decrypt(...)` 不检查 ACL，所以 ACL 测试必须用 `userDecrypt`、`publicDecrypt`、失败路径和跨合约调用来证明权限真的正确。
+`decrypt(...)` does not check ACL, so ACL tests must use `userDecrypt`, `publicDecrypt`, failure paths, and cross-contract calls to prove that permissions are actually correct.
 
-## 授权有四类
+## Four Authorization Types
 
-| 授权 | 用途 | 测试方式 |
+| Authorization | Purpose | How to test |
 | --- | --- | --- |
-| `FHE.allowThis(value)` | 合约后续还能使用/参与 user decrypt | `userDecrypt` 缺它会失败 |
-| `FHE.allow(value, user)` | 用户能 user decrypt | 用对应 user `userDecrypt` |
-| `FHE.allowTransient(value, target)` | 同一交易内给另一个合约临时使用 | 测跨合约调用成功/失败 |
-| `FHE.makePubliclyDecryptable(value)` | 所有人可 public decrypt | 用 `publicDecrypt` |
+| `FHE.allowThis(value)` | Lets the contract keep using the value and participate in user decrypt | `userDecrypt` fails without it |
+| `FHE.allow(value, user)` | Lets the user perform user decrypt | Call `userDecrypt` as that user |
+| `FHE.allowTransient(value, target)` | Temporarily grants another contract access within the same transaction | Test cross-contract call success/failure |
+| `FHE.makePubliclyDecryptable(value)` | Lets anyone public-decrypt the value | Use `publicDecrypt` |
 
-每次生成新 ciphertext，都要重新考虑权限传播。旧 handle 的授权不会自动搬到新 handle 上。
+Every time a new ciphertext is produced, revisit permission propagation. Authorizations on the old handle are not automatically transferred to the new handle.
 
-## 保存状态后的基本测试
+## Basic Test After Storing State
 
-合约：
+Contract:
 
 ```solidity
 function deposit(externalEuint64 encryptedAmount, bytes calldata proof) external {
@@ -34,7 +34,7 @@ function deposit(externalEuint64 encryptedAmount, bytes calldata proof) external
 }
 ```
 
-测试：
+Test:
 
 ```solidity
 function test_deposit_grantsUserDecryptAcl() public {
@@ -53,11 +53,11 @@ function test_deposit_grantsUserDecryptAcl() public {
 }
 ```
 
-这个测试同时证明 `allowThis` 和 `allow(user)` 都存在。少任何一个，`userDecrypt` 都应失败。
+This test proves that both `allowThis` and `allow(user)` are present. If either is missing, `userDecrypt` should fail.
 
-## 专门测缺少 allowThis
+## Specifically Test Missing allowThis
 
-这是最容易被 `decrypt` 掩盖的问题。
+This is the easiest issue for `decrypt` to hide.
 
 ```solidity
 function test_userDecrypt_failsWithoutAllowThis() public {
@@ -83,7 +83,7 @@ function test_userDecrypt_failsWithoutAllowThis() public {
 }
 ```
 
-## 专门测缺少 user allow
+## Specifically Test Missing User allow
 
 ```solidity
 function test_userDecrypt_failsWithoutUserAllow() public {
@@ -105,9 +105,9 @@ function test_userDecrypt_failsWithoutUserAllow() public {
 }
 ```
 
-## 转账权限传播
+## Transfer Permission Propagation
 
-转账要更新两个新 handle：sender 新余额和 recipient 新余额。两边都要重新授权。
+A transfer updates two new handles: the sender's new balance and the recipient's new balance. Both sides must be authorized again.
 
 ```solidity
 function transfer(address to, externalEuint64 encryptedAmount, bytes calldata proof) external {
@@ -127,7 +127,7 @@ function transfer(address to, externalEuint64 encryptedAmount, bytes calldata pr
 }
 ```
 
-测试：
+Test:
 
 ```solidity
 function test_transfer_grantsRecipientBalanceAcl() public {
@@ -158,17 +158,17 @@ function _userDecryptBalance(uint256 pk, address account) internal returns (uint
 }
 ```
 
-如果 sender 也需要知道 recipient 的新余额，合约必须额外授权 sender。不要默认 sender 能解密 recipient 的状态。
+If the sender also needs to know the recipient's new balance, the contract must grant the sender separately. Do not assume the sender can decrypt the recipient's state by default.
 
-## Public decrypt flag
+## Public Decrypt Flag
 
-业务合约通常用：
+Application contracts usually call:
 
 ```solidity
 FHE.makePubliclyDecryptable(value);
 ```
 
-测试正反两条路径：
+Test both positive and negative paths:
 
 ```solidity
 function test_publicDecrypt_requiresPublicFlag() public {
@@ -186,13 +186,13 @@ function test_publicDecrypt_requiresPublicFlag() public {
 }
 ```
 
-底层 host contract 测试可以直接调用 `_acl.allowForDecryption(handles)`。业务合约测试优先走 `FHE.makePubliclyDecryptable`。
+Low-level host contract tests may call `_acl.allowForDecryption(handles)` directly. Application contract tests should prefer `FHE.makePubliclyDecryptable`.
 
 ## Transient ACL
 
-`allowTransient` 是同一交易内的临时权限。它不等价于 `allow`，也不能用于 user decrypt。
+`allowTransient` is a same-transaction temporary permission. It is not equivalent to `allow`, and it cannot be used for user decrypt.
 
-测试重点：
+Core test:
 
 ```solidity
 function test_userDecrypt_failsWithOnlyTransientAllow() public {
@@ -201,15 +201,15 @@ function test_userDecrypt_failsWithOnlyTransientAllow() public {
 }
 ```
 
-跨合约组合测试应覆盖：
+Cross-contract composition tests should cover:
 
-- 不调用 `FHE.allowTransient(value, target)` 时，下游合约无法使用 handle。
-- 调用后，同一交易内下游合约可以使用 handle。
-- 下一笔交易不能继续依赖 transient 权限。
+- Without `FHE.allowTransient(value, target)`, the downstream contract cannot use the handle.
+- After it is called, the downstream contract can use the handle within the same transaction.
+- The next transaction cannot rely on transient permission.
 
-## 接收已有 handle
+## Receiving Existing Handles
 
-如果函数接收已有 `euintXX`，而不是本次 `FHE.fromExternal` 创建的新 input，要检查 sender 是否有权使用：
+If a function receives an existing `euintXX` instead of a new input created by this call's `FHE.fromExternal`, check whether the sender is allowed to use it:
 
 ```solidity
 function consumeExisting(euint64 amount) external {
@@ -222,7 +222,7 @@ function consumeExisting(euint64 amount) external {
 }
 ```
 
-测试思路：
+Test idea:
 
 ```solidity
 function test_consumeExisting_revertsForUnauthorizedHandle() public {
@@ -234,14 +234,14 @@ function test_consumeExisting_revertsForUnauthorizedHandle() public {
 }
 ```
 
-## 排错表
+## Troubleshooting Table
 
-| 现象 | 先查什么 |
+| Symptom | Check first |
 | --- | --- |
-| `decrypt` 通过，`userDecrypt` 失败 | `allowThis` 和 `allow(user)` |
-| `UserNotAuthorizedForDecrypt` | 是否授权了 user，是否只有 transient |
-| `ContractNotAuthorizedForDecrypt` | 是否调用 `FHE.allowThis` |
-| recipient 解不了转账后的余额 | 是否授权了 recipient 的新 handle |
-| public decrypt 失败 | 是否调用 `makePubliclyDecryptable`，handles 是否正确 |
-| 跨合约 FHE 运算失败 | 是否给目标合约 `allowTransient` |
-| 下一笔交易 transient 权限失效 | 这是预期，需要 persistent `allow` |
+| `decrypt` passes, `userDecrypt` fails | `allowThis` and `allow(user)` |
+| `UserNotAuthorizedForDecrypt` | Whether the user was authorized, and whether only transient permission was granted |
+| `ContractNotAuthorizedForDecrypt` | Whether `FHE.allowThis` was called |
+| Recipient cannot decrypt post-transfer balance | Whether the recipient's new handle was authorized |
+| Public decrypt fails | Whether `makePubliclyDecryptable` was called and whether handles are correct |
+| Cross-contract FHE operation fails | Whether the target contract was granted `allowTransient` |
+| Transient permission disappears in the next transaction | This is expected; use persistent `allow` when needed |
