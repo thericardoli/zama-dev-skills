@@ -48,11 +48,14 @@
 ## 5. User Decrypt
 
 - 合约是否只给应读取者授权；view 函数返回 handle 不等于可解密权限。
+- 若使用 delegated user decrypt，是否明确 delegator、delegate、contractAddress 的边界；delegate 不应被误当成 handle 的 ACL owner。
+- delegation 是否有合理 expiration；永久 delegation、wildcard contractAddress、backend 代解密服务是否有产品级确认和撤销流程。
+- revoke/delegate 是否覆盖同块竞态、过期 delegation、错误 contractAddress、多合约批量 delegation、delegate key 泄露后的恢复路径。
 - 前端是否以当前 account、chain、contractAddress 请求 decrypt；账户或网络切换后是否清理旧结果。
 - session/keypair 是否有 TTL；disconnect/account change 后是否 revoke 或刷新。
 - 是否处理 zero/uninitialized handle；避免把 `0x00` 当成真实余额或继续 decrypt。
 - 是否有未授权用户 decrypt 失败测试。
-- 批量 decrypt 是否考虑 SDK bit-length 限制和错误状态。
+- 批量 decrypt 是否考虑 SDK contract address 数量、bit-length 限制和错误状态。
 
 ## 6. Public Decrypt / Async Finalize
 
