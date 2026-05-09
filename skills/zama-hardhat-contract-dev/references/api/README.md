@@ -1,15 +1,15 @@
-# Hardhat FHEVM API 总览
+# Hardhat FHEVM API Overview
 
-先看项目安装的 `node_modules/@fhevm/hardhat-plugin` 类型定义。本文按 `@fhevm/hardhat-plugin@0.4.2` 和官方 template 写法整理。
+Start with the type definitions installed in the project at `node_modules/@fhevm/hardhat-plugin`. This document is organized around `@fhevm/hardhat-plugin@0.4.2` and the official template patterns.
 
-| 场景 | 读哪个文件 | 关键 API |
+| Scenario | Read | Key APIs |
 | --- | --- | --- |
-| HRE 和运行模式 | `runtime.md` | `fhevm.isMock`、`initializeCLIApi`、`assertCoprocessorInitialized` |
+| HRE and runtime mode | `runtime.md` | `fhevm.isMock`, `initializeCLIApi`, `assertCoprocessorInitialized` |
 | encrypted input | `encrypted-input.md` | `createEncryptedInput(...).addXX(...).encrypt()` |
-| user/public decrypt | `decrypt.md` | `userDecryptEuint`、`publicDecryptEuint`、generic decrypt |
-| Hardhat task / debug | `tasks-debug.md` | `initializeCLIApi`、`tryParseFhevmError`、`fhevm.debugger` |
+| user/public decrypt | `decrypt.md` | `userDecryptEuint`, `publicDecryptEuint`, generic decrypt |
+| Hardhat tasks / debug | `tasks-debug.md` | `initializeCLIApi`, `tryParseFhevmError`, `fhevm.debugger` |
 
-## 最常用三步
+## The Three Most Common Steps
 
 ```ts
 import { FhevmType } from "@fhevm/hardhat-plugin";

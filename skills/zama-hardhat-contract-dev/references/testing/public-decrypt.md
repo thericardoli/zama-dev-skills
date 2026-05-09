@@ -1,8 +1,8 @@
-# 测试 public decrypt
+# Testing Public Decrypt
 
-只有结果本来就应该公开时才 public decrypt。
+Use public decrypt only when the result is intended to be public.
 
-合约侧：
+Contract side:
 
 ```solidity
 event ResultRequested(euint64 result);
@@ -19,7 +19,7 @@ function result() external view returns (euint64) {
 }
 ```
 
-测试侧：
+Test side:
 
 ```ts
 await vault.requestResult();
@@ -28,7 +28,7 @@ const clear = await fhevm.publicDecryptEuint(FhevmType.euint64, handle);
 expect(clear).to.eq(100n);
 ```
 
-## 未标记 public 应失败
+## Unmarked Handles Should Fail
 
 ```ts
 const handle = await vault.result();
@@ -41,7 +41,7 @@ try {
 expect(failed).to.eq(true);
 ```
 
-## 类型
+## Types
 
 ```ts
 await fhevm.publicDecryptEbool(handle);
@@ -49,19 +49,19 @@ await fhevm.publicDecryptEuint(FhevmType.euint32, handle);
 await fhevm.publicDecryptEaddress(handle);
 ```
 
-generic：
+Generic:
 
 ```ts
 const result = await fhevm.publicDecrypt([handle0, handle1]);
 const clear0 = result.clearValues[handle0];
 ```
 
-## 链上 finalize
+## On-Chain Finalize
 
-如果合约有 `finalize(clear, proof)` 并调用 `FHE.checkSignatures`，Hardhat plugin 的 high-level `publicDecryptEuint` 只返回 clear value，不直接给 Solidity callback proof。测试这类流程时：
+If the contract has `finalize(clear, proof)` and calls `FHE.checkSignatures`, the Hardhat plugin's high-level `publicDecryptEuint` returns only the clear value; it does not directly provide a Solidity callback proof. When testing this kind of flow:
 
-- 优先按项目已有 Zama SDK 或 relayer runtime callback helper。
-- 或在 mock/debug 层使用 `fhevm.debugger.createDecryptionSignatures(handles, clearValues)` 生成签名参数。
-- 覆盖错 handle、错 cleartext、重复 finalize、未 request finalize。
+- Prefer the project's existing Zama SDK or relayer runtime callback helper.
+- Alternatively, in mock/debug mode, use `fhevm.debugger.createDecryptionSignatures(handles, clearValues)` to generate signature parameters.
+- Cover wrong handle, wrong cleartext, duplicate finalize, and finalize without request.
 
-不要把 user decrypt 签名拿来当 public decrypt callback proof。
+Do not use a user decrypt signature as a public decrypt callback proof.

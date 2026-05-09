@@ -1,22 +1,22 @@
-# Hardhat 测试总览
+# Hardhat Testing Overview
 
-本目录说明如何把 `zama-fhevm-solidity-core` 的合约模式落到 Hardhat TypeScript 测试。
+This directory explains how to apply the contract patterns from `zama-fhevm-solidity-core` in Hardhat TypeScript tests.
 
-当前核对过的来源：
+Currently validated against:
 
 - `zama-ai/fhevm-hardhat-template` commit `ec84e1aa1b0a3ef61d9795ef8bf367115b79272f`
 - `@fhevm/hardhat-plugin@0.4.2`
 - `@fhevm/mock-utils@0.4.2`
 
-## 三种运行模式
+## Three Runtime Modes
 
-| 模式 | 命令 | 加密 | 用途 |
+| Mode | Command | Encryption | Purpose |
 | --- | --- | --- | --- |
-| in-memory mock | `npx hardhat test` | mock | 快速单元测试、CI |
-| localhost mock | `npx hardhat node` + `--network localhost` | mock | 前端/task 本地联调 |
-| Sepolia | `--network sepolia` | real | 真实端到端验证 |
+| in-memory mock | `npx hardhat test` | mock | Fast unit tests and CI |
+| localhost mock | `npx hardhat node` + `--network localhost` | mock | Local frontend/task integration |
+| Sepolia | `--network sepolia` | real | Real end-to-end validation |
 
-mock suite：
+Mock suite:
 
 ```ts
 beforeEach(async function () {
@@ -26,7 +26,7 @@ beforeEach(async function () {
 });
 ```
 
-Sepolia suite：
+Sepolia suite:
 
 ```ts
 before(async function () {
@@ -36,7 +36,7 @@ before(async function () {
 });
 ```
 
-## 最小测试骨架
+## Minimal Test Skeleton
 
 ```ts
 import { FhevmType } from "@fhevm/hardhat-plugin";
@@ -78,10 +78,10 @@ describe("ConfidentialVault", function () {
 });
 ```
 
-## 文件导览
+## File Guide
 
-- `encrypt.md`：如何测试 encrypted input、target/user 绑定和多值输入。
-- `decrypt-acl.md`：如何测试 user decrypt、ACL、未授权失败。
-- `public-decrypt.md`：如何测试 public decrypt 和公开 reveal。
-- `sepolia.md`：如何写真实网络 e2e。
-- `erc7984.md`：如何测试 ERC7984 confidential token。
+- `encrypt.md`: how to test encrypted input, target/user binding, and multi-value input.
+- `decrypt-acl.md`: how to test user decrypt, ACLs, and unauthorized failures.
+- `public-decrypt.md`: how to test public decrypt and public reveal flows.
+- `sepolia.md`: how to write real-network e2e tests.
+- `erc7984.md`: how to test ERC7984 confidential tokens.

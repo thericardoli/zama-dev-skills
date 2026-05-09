@@ -1,21 +1,21 @@
 # Runtime API
 
-`@fhevm/hardhat-plugin` 扩展 Hardhat Runtime Environment：
+`@fhevm/hardhat-plugin` extends the Hardhat Runtime Environment:
 
 ```ts
 import { fhevm } from "hardhat";
-// 或
+// or
 import * as hre from "hardhat";
 await hre.fhevm.getRelayerMetadata();
 ```
 
-`hardhat.config.ts` 必须有：
+`hardhat.config.ts` must include:
 
 ```ts
 import "@fhevm/hardhat-plugin";
 ```
 
-## 运行模式
+## Runtime Mode
 
 ```ts
 if (!fhevm.isMock) {
@@ -23,14 +23,14 @@ if (!fhevm.isMock) {
 }
 ```
 
-`fhevm.isMock`：
+`fhevm.isMock`:
 
-- `true`：Hardhat in-memory 或 Hardhat node mock 环境，适合单元测试和本地联调。
-- `false`：Sepolia/mainnet 等真实 FHEVM 环境，使用真实加密和 relayer。
+- `true`: Hardhat in-memory or Hardhat node mock environment; suitable for unit tests and local integration work.
+- `false`: real FHEVM environments such as Sepolia/mainnet, using real encryption and the relayer.
 
-## CLI task 初始化
+## CLI Task Initialization
 
-自定义 Hardhat task 必须先初始化：
+Custom Hardhat tasks must initialize first:
 
 ```ts
 task("task:decrypt-balance").setAction(async (_args, hre) => {
@@ -39,24 +39,24 @@ task("task:decrypt-balance").setAction(async (_args, hre) => {
 });
 ```
 
-普通 `npx hardhat test` 由插件接管初始化，不需要手动调用。
+Regular `npx hardhat test` runs are initialized by the plugin and do not require a manual call.
 
-## 配置检查
+## Configuration Checks
 
-部署或连到远程网络后，检查合约是否使用正确 FHEVM host config：
+After deploying or connecting to a remote network, check whether the contract uses the correct FHEVM host config:
 
 ```ts
 await fhevm.assertCoprocessorInitialized(contract, "ConfidentialVault");
 const cfg = await fhevm.getCoprocessorConfig(await contract.getAddress());
 ```
 
-命令行也可用：
+The CLI command is also available:
 
 ```bash
 npx hardhat --network sepolia fhevm check-fhevm-compatibility --address 0x...
 ```
 
-## 事件和 HCU
+## Events and HCU
 
 ```ts
 const receipt = await tx.wait();
@@ -64,9 +64,9 @@ const events = fhevm.parseCoprocessorEvents(receipt?.logs);
 const hcu = fhevm.computeTransactionHCU(receipt!);
 ```
 
-用来排查 FHE executor 事件和估算 FHE 操作成本。普通业务断言不要只依赖 HCU。
+Use these helpers to inspect FHE executor events and estimate the cost of FHE operations. Regular business assertions should not rely on HCU alone.
 
-## 错误排查
+## Error Troubleshooting
 
 ```ts
 try {
@@ -77,4 +77,4 @@ try {
 }
 ```
 
-常见能解析的问题包括 encrypted input 的 target/user 绑定错误、handle 类型不匹配、ACL 缺失等。
+Common parseable issues include encrypted input target/user binding mistakes, handle type mismatches, and missing ACL permissions.

@@ -1,8 +1,8 @@
-# Sepolia e2e 测试
+# Sepolia e2e Testing
 
-Sepolia 使用真实 FHEVM 加密，测试慢且需要测试 ETH。只保留少量端到端路径，不把 mock 单元测试整套搬过去。
+Sepolia uses real FHEVM encryption. Tests are slow and require test ETH. Keep only a small number of end-to-end paths there; do not move the entire mock unit test suite over.
 
-## 基本结构
+## Basic Structure
 
 ```ts
 import { FhevmType } from "@fhevm/hardhat-plugin";
@@ -38,19 +38,19 @@ describe("ConfidentialVaultSepolia", function () {
 });
 ```
 
-## 注意事项
+## Notes
 
-- 先部署：`npx hardhat deploy --network sepolia`。
-- 如果 `deployments.get(...)` 找不到，提示用户先部署。
-- 不要依赖初始状态为 0；Sepolia 合约可能已有历史状态。
-- 给测试设置 timeout。
-- 尽量只跑一个最小真实路径：encrypt input、write tx、read handle、user decrypt。
-- 不要在 Sepolia suite 使用 `fhevm.debugger.decrypt*`。
+- Deploy first: `npx hardhat deploy --network sepolia`.
+- If `deployments.get(...)` fails, tell the user to deploy first.
+- Do not assume the initial state is `0`; Sepolia contracts may already have historical state.
+- Configure test timeouts.
+- Prefer a single minimal real path: encrypted input, write transaction, read handle, user decrypt.
+- Do not use `fhevm.debugger.decrypt*` in Sepolia suites.
 
-## 配置检查
+## Configuration Check
 
 ```bash
 npx hardhat --network sepolia fhevm check-fhevm-compatibility --address 0x...
 ```
 
-如果检查失败，先看合约是否继承 `ZamaEthereumConfig`，再看 `@fhevm/solidity` 版本和网络配置。
+If the check fails, first confirm that the contract inherits `ZamaEthereumConfig`, then inspect the `@fhevm/solidity` version and network configuration.

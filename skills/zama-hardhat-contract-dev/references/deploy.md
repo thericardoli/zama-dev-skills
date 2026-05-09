@@ -1,10 +1,10 @@
-# Hardhat 部署
+# Hardhat Deployment
 
-本文件只讨论 FHEVM dApp 合约部署。Hardhat plugin 会在 mock 网络里准备 FHEVM host contracts；Sepolia 使用 Zama 官方 FHEVM 网络配置。
+This document covers only FHEVM dApp contract deployment. The Hardhat plugin prepares FHEVM host contracts on mock networks; Sepolia uses Zama's official FHEVM network configuration.
 
-## 密钥和变量
+## Keys and Variables
 
-不要把 private key 写进 `.env`、脚本或 CI log。模板使用 Hardhat vars：
+Do not write private keys into `.env`, scripts, or CI logs. The template uses Hardhat vars:
 
 ```bash
 npx hardhat vars set SEPOLIA_MNEMONIC
@@ -13,9 +13,9 @@ npx hardhat vars set ETHERSCAN_API_KEY
 npx hardhat vars setup
 ```
 
-注意：Hardhat vars 存在项目代码之外，适合避免把 secret 提交进仓库，但它不是加密 keystore。生产部署优先用硬件钱包、multisig、KMS 或受控 secret manager。
+Note: Hardhat vars live outside the project source tree and help avoid committing secrets, but they are not an encrypted keystore. For production deployments, prefer hardware wallets, multisigs, KMS, or managed secret managers.
 
-`hardhat.config.ts` 可以为本地网络使用固定测试 mnemonic，但 live network 必须用独立变量，不能有默认 signer：
+`hardhat.config.ts` may use a fixed test mnemonic for local networks, but live networks must use independent variables and must not have a default signer:
 
 ```ts
 import { vars } from "hardhat/config";
@@ -36,19 +36,19 @@ function liveMnemonicAccounts(mnemonic: string) {
 // sepolia: { url: SEPOLIA_RPC_URL, accounts: liveMnemonicAccounts(SEPOLIA_MNEMONIC) }
 ```
 
-不要写：
+Do not write:
 
 ```ts
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const MNEMONIC = vars.get("MNEMONIC", LOCAL_MNEMONIC);
-// 然后把同一个 MNEMONIC 同时用于 hardhat 和 sepolia
+// Then use the same MNEMONIC for both hardhat and sepolia
 ```
 
-Live deploy 脚本还应在第一步显式检查配置，给出清晰错误，而不是等 RPC 或 signer 报模糊异常。
+Live deployment scripts should also check configuration explicitly as the first step and fail with clear errors instead of waiting for ambiguous RPC or signer failures.
 
-## deploy 脚本
+## Deployment Script
 
-`deploy/001_deploy_vault.ts`：
+`deploy/001_deploy_vault.ts`:
 
 ```ts
 import { vars } from "hardhat/config";
@@ -93,42 +93,42 @@ func.id = "deploy_confidential_vault";
 func.tags = ["ConfidentialVault"];
 ```
 
-如果构造函数需要 owner、token、threshold 等参数，显式从 Hardhat vars、deploy 参数或 network config 读取，不要默认复用 deployer。
+If the constructor requires parameters such as owner, token, or threshold, read them explicitly from Hardhat vars, deployment parameters, or network config. Do not reuse the deployer by default.
 
 ## Localhost mock
 
-终端 1：
+Terminal 1:
 
 ```bash
 pnpm run chain
 ```
 
-终端 2：
+Terminal 2:
 
 ```bash
 pnpm run deploy:localhost
-# 或
+# or
 npx hardhat deploy --network localhost
 ```
 
-本地交互：
+Local interaction:
 
 ```bash
 npx hardhat --network localhost task:deposit --address 0x... --amount 100
 npx hardhat --network localhost task:decrypt-balance --address 0x...
 ```
 
-注意：
+Notes:
 
-- `npx hardhat test` 会在 in-memory mock 网络内初始化 FHEVM host，不需要先启动 node。
-- `npx hardhat node` 会提供持久 mock 状态，适合前端或 task 联调。
-- mock 模式不提供生产隐私保证。
+- `npx hardhat test` initializes the FHEVM host inside the in-memory mock network; you do not need to start a node first.
+- `npx hardhat node` provides persistent mock state and is useful for frontend or task integration testing.
+- Mock mode does not provide production privacy guarantees.
 
 ## Sepolia
 
-Sepolia 使用真实 FHEVM 加密和 Zama relayer，不跑 mock-only 断言。
+Sepolia uses real FHEVM encryption and the Zama relayer. Do not run mock-only assertions there.
 
-前置：
+Prerequisites:
 
 ```bash
 npx hardhat vars set SEPOLIA_MNEMONIC
@@ -136,42 +136,42 @@ npx hardhat vars set SEPOLIA_RPC_URL
 npx hardhat vars set ETHERSCAN_API_KEY
 ```
 
-部署：
+Deploy:
 
 ```bash
 npx hardhat deploy --network sepolia
 npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
 ```
 
-部署后检查：
+Post-deployment checks:
 
 ```bash
 npx hardhat --network sepolia fhevm check-fhevm-compatibility --address <CONTRACT_ADDRESS>
 npx hardhat test --network sepolia
 ```
 
-Sepolia 注意事项：
+Sepolia notes:
 
-- 确认合约继承 `ZamaEthereumConfig`。
-- 部署命令必须在缺少 `SEPOLIA_RPC_URL`、`SEPOLIA_MNEMONIC` 或受控 signer 配置时清晰失败。
-- 不要把 public Hardhat test mnemonic、占位 RPC、空 accounts 当成 Sepolia 的 fallback。
-- 确认前端/task 生成 encrypted input 时使用的 contract address、user address、chain id、relayer config 与 Sepolia 一致。
-- Sepolia e2e 慢，给测试设置更长 timeout。
-- 不要把 mock-only `fhevm.debugger.decrypt*` 或 `fhevm.isMock` suite 直接跑到 Sepolia。
+- Confirm the contract inherits `ZamaEthereumConfig`.
+- Deployment commands must fail clearly when `SEPOLIA_RPC_URL`, `SEPOLIA_MNEMONIC`, or managed signer configuration is missing.
+- Do not use the public Hardhat test mnemonic, placeholder RPC URLs, or empty accounts as Sepolia fallbacks.
+- Confirm that the contract address, user address, chain ID, and relayer config used by frontend/task encrypted input generation all match Sepolia.
+- Sepolia e2e tests are slow; configure longer test timeouts.
+- Do not run mock-only `fhevm.debugger.decrypt*` assertions or `fhevm.isMock` suites directly on Sepolia.
 
 ## Mainnet
 
-Mainnet 部署流程和 Sepolia 类似，但必须先确认当前 `@fhevm/solidity`、`@fhevm/hardhat-plugin`、Zama SDK、Zama docs 已支持目标 mainnet。插件 README 提到 mainnet encrypted input / decrypt 需要配置 Zama API key：
+Mainnet deployment is similar to Sepolia, but first confirm that the current `@fhevm/solidity`, `@fhevm/hardhat-plugin`, Zama SDK, and Zama docs support the target mainnet. The plugin README states that mainnet encrypted input / decrypt requires a Zama API key:
 
 ```bash
 npx hardhat vars set ZAMA_FHEVM_API_KEY
 npx hardhat vars get ZAMA_FHEVM_API_KEY
 ```
 
-Mainnet 注意事项：
+Mainnet notes:
 
-- 使用硬件钱包、multisig 或受控 signer；不要把生产 mnemonic/private key 放在 `.env`。
-- 在 fork 或 Sepolia 上演练 deploy、verify、constructor args、owner/pause 初始化。
-- 对所有 `FHE.makePubliclyDecryptable` 做产品级审查。
-- 部署后执行最小真实流程：encrypted input 交易、user decrypt、必要时 public decrypt。
-- 若当前依赖没有 mainnet host config，不要硬编码 Sepolia/local 地址冒充 mainnet。
+- Use a hardware wallet, multisig, or managed signer; do not put production mnemonics/private keys in `.env`.
+- Rehearse deployment, verification, constructor arguments, and owner/pause initialization on a fork or Sepolia.
+- Perform a product-level review of every `FHE.makePubliclyDecryptable` call.
+- After deployment, run the smallest real workflow: encrypted input transaction, user decrypt, and public decrypt if required.
+- If the current dependencies do not provide mainnet host config, do not hard-code Sepolia/local addresses and pretend they are mainnet.

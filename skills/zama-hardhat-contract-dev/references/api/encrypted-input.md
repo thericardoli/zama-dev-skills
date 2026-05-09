@@ -1,6 +1,6 @@
 # Encrypted Input API
 
-核心 API：
+Core API:
 
 ```ts
 const input = fhevm.createEncryptedInput(contractAddress, userAddress);
@@ -8,13 +8,13 @@ input.add64(100n);
 const encrypted = await input.encrypt();
 ```
 
-`contractAddress` 必须是最终调用 `FHE.fromExternal` 的合约地址。`userAddress` 必须是发起交易的 signer 地址。
+`contractAddress` must be the address of the contract that ultimately calls `FHE.fromExternal`. `userAddress` must be the address of the signer that sends the transaction.
 
-## 支持的 add 方法
+## Supported add Methods
 
-| Solidity 外部类型 | TypeScript add | 明文类型 |
+| Solidity external type | TypeScript add | Plaintext type |
 | --- | --- | --- |
-| `externalEbool` | `addBool(value)` | `boolean | number | bigint`，只接受 0/1 或 bool |
+| `externalEbool` | `addBool(value)` | `boolean | number | bigint`; accepts only 0/1 or bool |
 | `externalEuint8` | `add8(value)` | `number | bigint` |
 | `externalEuint16` | `add16(value)` | `number | bigint` |
 | `externalEuint32` | `add32(value)` | `number | bigint` |
@@ -23,31 +23,31 @@ const encrypted = await input.encrypt();
 | `externalEuint256` | `add256(value)` | `number | bigint` |
 | `externalEaddress` | `addAddress(value)` | checksum-able address string |
 
-当前 mock-utils 类型里没有 `add4`，即使 `FhevmType.euint4` 存在，也不要假设 external input builder 支持它。
+The current mock-utils types do not expose `add4`. Even though `FhevmType.euint4` exists, do not assume the external input builder supports it.
 
-## 返回值
+## Return Value
 
 ```ts
 const encrypted = await input.encrypt();
-encrypted.handles[0]; // ethers 可接受的 bytes32-like handle
+encrypted.handles[0]; // bytes32-like handle accepted by ethers
 encrypted.inputProof; // bytes-like proof
 ```
 
-mock 返回的 handle 通常是 `Uint8Array`，可以直接传给合约的 `bytes32` 参数。若要打印、作为 map key，或传给只收 hex string 的 helper，先做转换：
+Handles returned by the mock environment are usually `Uint8Array` values and can be passed directly to contract `bytes32` parameters. Convert first if you need to print them, use them as map keys, or pass them to helpers that accept only hex strings:
 
 ```ts
 const handle = ethers.hexlify(encrypted.handles[0]);
 ```
 
-传给 Solidity：
+Passing to Solidity:
 
 ```ts
 await vault.connect(alice).deposit(encrypted.handles[0], encrypted.inputProof);
 ```
 
-## 多值输入
+## Multi-Value Input
 
-handles 顺序必须和 Solidity 参数语义一致：
+The handle order must match the Solidity parameter semantics:
 
 ```ts
 const input = fhevm.createEncryptedInput(contractAddress, alice.address);
@@ -61,9 +61,9 @@ await contract
   .submit(enc.handles[0], enc.handles[1], enc.handles[2], enc.inputProof);
 ```
 
-## 重载函数
+## Overloaded Functions
 
-`externalEuint64` 在 ABI 中常显示为 `bytes32`。ERC7984 或多重载合约中，显式选择签名：
+`externalEuint64` often appears as `bytes32` in the ABI. In ERC7984 or heavily overloaded contracts, select the function signature explicitly:
 
 ```ts
 await token
@@ -75,9 +75,9 @@ await token
   );
 ```
 
-## 错误路径
+## Failure Paths
 
-这些都应该失败：
+All of the following should fail:
 
 ```ts
 const wrongTarget = await fhevm
@@ -99,4 +99,4 @@ await expect(vault.connect(alice).deposit(wrongUser.handles[0], wrongUser.inputP
   .to.be.reverted;
 ```
 
-target 和 user 绑定错误是 Hardhat FHEVM 测试里最常见的问题。
+Target and user binding mistakes are among the most common issues in Hardhat FHEVM tests.

@@ -1,8 +1,8 @@
-# Hardhat 项目结构
+# Hardhat Project Structure
 
-优先参考 `zama-ai/fhevm-hardhat-template`，再按当前项目已有结构调整。
+Use `zama-ai/fhevm-hardhat-template` as the primary reference, then adapt it to the current project's existing structure.
 
-## 目录
+## Directory Layout
 
 ```text
 contracts/
@@ -15,17 +15,17 @@ package.json
 tsconfig.json
 ```
 
-常见职责：
+Typical responsibilities:
 
-- `contracts/`：FHEVM Solidity 合约。
-- `deploy/`：`hardhat-deploy` 脚本。
-- `tasks/`：交互、加密输入、user decrypt、运维检查。
-- `test/`：mock 单元测试和 Sepolia e2e 测试。
-- `types/`：TypeChain 输出。
+- `contracts/`: FHEVM Solidity contracts.
+- `deploy/`: `hardhat-deploy` scripts.
+- `tasks/`: interaction, encrypted input, user decrypt, and operational checks.
+- `test/`: mock unit tests and Sepolia e2e tests.
+- `types/`: TypeChain output.
 
-## 关键依赖
+## Key Dependencies
 
-模板当前依赖组合：
+The current template uses the following dependency set:
 
 - `@fhevm/solidity`
 - `@fhevm/hardhat-plugin`
@@ -38,11 +38,11 @@ tsconfig.json
 - `@typechain/hardhat`
 - `@typechain/ethers-v6`
 
-先读 `package.json` 和 lockfile。不要把 npm latest API 直接套到旧项目。
+Read `package.json` and the lockfile first. Do not apply npm latest APIs directly to older projects.
 
 ## hardhat.config.ts
 
-必须启用插件：
+The plugin must be enabled:
 
 ```ts
 import "@fhevm/hardhat-plugin";
@@ -105,16 +105,16 @@ const config: HardhatUserConfig = {
 export default config;
 ```
 
-注意：
+Notes:
 
-- FHEVM 需要 Cancun EVM。
-- 本地 `hardhat` / `localhost` 可以使用公开测试 mnemonic；Sepolia/mainnet 不能复用它。
-- Live network signer 使用独立变量，例如 `SEPOLIA_MNEMONIC`，不要写成 `vars.get("MNEMONIC", LOCAL_MNEMONIC)` 后同时喂给 local 和 Sepolia。
-- `SEPOLIA_RPC_URL` 和 `SEPOLIA_MNEMONIC` 缺失时，部署脚本必须 fail fast；不要用占位 Infura key、空 URL 或默认 mnemonic 让命令继续跑。
-- Hardhat vars 降低误提交 `.env` 的风险，但仍是本地明文文件；生产部署优先使用硬件钱包、multisig、KMS 或受控 secret manager。
-- 如果项目已用 `dotenv`，迁移时把 live secrets 改为 Hardhat vars 或受控 signer，并运行 `npx hardhat vars setup`。
+- FHEVM requires the Cancun EVM.
+- Local `hardhat` / `localhost` networks may use the public test mnemonic; Sepolia/mainnet must not reuse it.
+- Use a dedicated variable for live-network signers, such as `SEPOLIA_MNEMONIC`. Do not write `vars.get("MNEMONIC", LOCAL_MNEMONIC)` and then feed the same mnemonic to both local and Sepolia networks.
+- When `SEPOLIA_RPC_URL` or `SEPOLIA_MNEMONIC` is missing, deployment scripts must fail fast. Do not let commands continue with placeholder Infura keys, empty URLs, or the default mnemonic.
+- Hardhat vars reduce the risk of accidentally committing `.env`, but they are still local plaintext files. For production deployment, prefer hardware wallets, multisigs, KMS, or managed secret managers.
+- If the project already uses `dotenv`, migrate live secrets to Hardhat vars or a managed signer, then run `npx hardhat vars setup`.
 
-## 合约基线
+## Contract Baseline
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -141,11 +141,11 @@ contract ConfidentialVault is ZamaEthereumConfig {
 }
 ```
 
-合约开发细节读 `zama-fhevm-solidity-core`。Hardhat skill 只说明如何配置、测试、部署。
+For contract development details, read `zama-fhevm-solidity-core`. This Hardhat skill focuses on configuration, testing, and deployment.
 
-## 常用命令
+## Common Commands
 
-优先使用项目已有 npm scripts。模板常见命令：
+Prefer the project's existing npm scripts. Common template commands:
 
 ```bash
 npm install
@@ -157,14 +157,14 @@ npm run deploy:sepolia
 npm run verify:sepolia
 ```
 
-修改合约 ABI 后：
+After changing a contract ABI:
 
 ```bash
 npm run compile
 npm run typechain
 ```
 
-如果类型还是旧的：
+If generated types are still stale:
 
 ```bash
 npm run clean

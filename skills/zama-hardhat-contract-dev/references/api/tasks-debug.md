@@ -1,6 +1,6 @@
-# Hardhat Task 和 Debug API
+# Hardhat Task and Debug API
 
-自定义 task 与测试不同：必须显式初始化 CLI API。
+Custom tasks differ from tests: they must initialize the CLI API explicitly.
 
 ```ts
 import { FhevmType } from "@fhevm/hardhat-plugin";
@@ -22,7 +22,7 @@ task("task:decrypt-balance")
   });
 ```
 
-## 写交易 task
+## Writing Transaction Tasks
 
 ```ts
 task("task:deposit")
@@ -46,9 +46,9 @@ task("task:deposit")
   });
 ```
 
-## 内置 fhevm 命令
+## Built-In fhevm Commands
 
-插件提供：
+The plugin provides:
 
 ```bash
 npx hardhat --network sepolia fhevm user-decrypt --type euint64 --handle 0x... --user 0 --contract 0x...
@@ -57,7 +57,7 @@ npx hardhat --network sepolia fhevm check-fhevm-compatibility --address 0x...
 npx hardhat fhevm resolve-fhevm-config --acl 0x... --kms 0x...
 ```
 
-## 排查 revert
+## Troubleshooting Reverts
 
 ```ts
 try {
@@ -69,4 +69,4 @@ try {
 }
 ```
 
-适合定位 encrypted input 的 contract/user 绑定错误、FHEVM host config 错误、handle 类型错误等。
+This is useful for diagnosing encrypted input contract/user binding mistakes, FHEVM host config errors, handle type errors, and similar issues.
