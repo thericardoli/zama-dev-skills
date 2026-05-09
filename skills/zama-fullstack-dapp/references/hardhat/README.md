@@ -1,8 +1,8 @@
-# Hardhat 编排路径
+# Hardhat Orchestration Path
 
-当 `packages/contract` 使用 Hardhat + `@fhevm/hardhat-plugin` 时，按本文件串联具体 skills。
+When `packages/contract` uses Hardhat plus `@fhevm/hardhat-plugin`, use this file to compose the relevant skills.
 
-## 推荐结构
+## Recommended Structure
 
 ```text
 packages/
@@ -17,82 +17,82 @@ packages/
 │   └── package.json
 ├── frontend/
 │   └── src/
-└── service/       # 可选
+└── service/       # Optional
 ```
 
-## 应读取的 Skills 和 References
+## Skills and References to Read
 
-合约逻辑：
+Contract logic:
 
 - `zama-fhevm-solidity-core/SKILL.md`
-- 需要 API 时读 `zama-fhevm-solidity-core/references/api.md`
-- 需要理解协议和架构时读 `zama-fhevm-solidity-core/references/overview.md`
+- For APIs, read `zama-fhevm-solidity-core/references/api.md`
+- For protocol and architecture context, read `zama-fhevm-solidity-core/references/overview.md`
 
-Hardhat 项目和测试：
+Hardhat project and tests:
 
 - `zama-hardhat-contract-dev/SKILL.md`
-- 新建或修配置：`references/hardhat-project.md`
-- 部署 local/Sepolia：`references/deploy.md`
-- 具体测试 API：按该 skill 的索引读取 testing、encrypt、decrypt-acl、public-decrypt、sepolia 等 reference
+- To create or fix configuration: `references/hardhat-project.md`
+- To deploy locally or to Sepolia: `references/deploy.md`
+- For specific testing APIs, follow that skill's index and read the testing, encrypt, decrypt-acl, public-decrypt, Sepolia, and related references as needed
 
-SDK 和客户端：
+SDK and clients:
 
 - `zama-sdk/SKILL.md`
-- 自定义合约调用：`references/custom-contracts.md`
-- React/wagmi 前端：`references/react-wagmi-nextjs.md`
-- Node、service、proxy：`references/node-and-local.md`
-- 配置 RPC/relayer/storage：`references/configuration.md`
-- 授权、session、浏览器安全：`references/session-security.md`
-- 错误处理：`references/errors-events.md` 和 `references/troubleshooting.md`
+- Custom contract calls: `references/custom-contracts.md`
+- React/wagmi frontend: `references/react-wagmi-nextjs.md`
+- Node, service, and proxy flows: `references/node-and-local.md`
+- RPC/relayer/storage configuration: `references/configuration.md`
+- Authorization, sessions, and browser security: `references/session-security.md`
+- Error handling: `references/errors-events.md` and `references/troubleshooting.md`
 
-安全复核：
+Security review:
 
 - `zama-fhevm-security-review/SKILL.md`
-- 对照 `references/checklist.md` 和 `references/vulnerability-patterns.md`
+- Cross-check against `references/checklist.md` and `references/vulnerability-patterns.md`
 
-## Hardhat 串联流程
+## Hardhat Integration Flow
 
-1. 先用 core skill 定义合约的 encrypted state、输入 proof、ACL、解密方式和算术边界。
-2. 用 Hardhat skill 创建或修复 `packages/contract`，确认 plugin、config、TypeChain、deploy、tasks 和测试结构。
-3. 明确 local/mock 和 SDK runtime 的边界：
-   - Hardhat mock tests 适合快速合约测试。
-   - 浏览器/Node SDK 需要匹配真实或兼容的 relayer runtime。
-   - 不要把 mock decrypt 等同于生产 user decrypt。
-4. 部署脚本或 deploy task 把地址写到 `packages/contract/deployments/`，再同步给 `packages/frontend/src/contracts/`。
-5. 用 SDK skill 选择 runtime：
-   - Sepolia/browser：`RelayerWeb`
-   - Node/service：`RelayerNode`
-   - local cleartext demo：`RelayerCleartext`，前提是本地链和 host contracts 兼容
-6. 前端或 Node 流程必须遵循 custom-contracts reference：encrypt -> contract write -> read handle -> authorize -> decrypt。
-7. 如果有 `packages/service`，它只负责需要后端保密或后台执行的事情，例如 relayer proxy、public decrypt finalize、链上监听和 smoke test。
+1. Use the core skill first to define the contract's encrypted state, input proofs, ACL, decryption method, and arithmetic boundaries.
+2. Use the Hardhat skill to create or repair `packages/contract`, including plugin setup, configuration, TypeChain, deployments, tasks, and test structure.
+3. Make the boundary between local/mock behavior and SDK runtime behavior explicit:
+   - Hardhat mock tests are appropriate for fast contract tests.
+   - Browser/Node SDK flows require a real or compatible relayer runtime.
+   - Do not treat mock decrypt as equivalent to production user decrypt.
+4. Deployment scripts or deploy tasks should write addresses to `packages/contract/deployments/`, then synchronize them to `packages/frontend/src/contracts/`.
+5. Use the SDK skill to select the runtime:
+   - Sepolia/browser: `RelayerWeb`
+   - Node/service: `RelayerNode`
+   - Local cleartext demo: `RelayerCleartext`, provided the local chain and host contracts are compatible
+6. Frontend or Node flows must follow the custom-contracts reference: encrypt -> contract write -> read handle -> authorize -> decrypt.
+7. If `packages/service` exists, it should only handle backend-private or background responsibilities, such as relayer proxying, public decrypt finalization, on-chain listeners, and smoke tests.
 
-## Artifact 约定
+## Artifact Conventions
 
-Hardhat 部署应产出按网络区分的 artifact：
+Hardhat deployments should produce network-specific artifacts:
 
-- `packages/contract/deployments/<network>/...`，保留 Hardhat/Hardhat Deploy 原始输出。
-- `packages/contract/deployments/addresses.json`，整理成前端友好的 chain id -> contracts map。
-- `packages/frontend/src/contracts/addresses.json`，从 canonical artifact 生成。
+- `packages/contract/deployments/<network>/...`, preserving the raw Hardhat/Hardhat Deploy output.
+- `packages/contract/deployments/addresses.json`, normalized into a frontend-friendly chain ID -> contracts map.
+- `packages/frontend/src/contracts/addresses.json`, generated from the canonical artifact.
 
-ABI 的来源优先级：
+ABI source priority:
 
-1. TypeChain 和 Hardhat artifacts。
-2. 生成到 `packages/frontend/src/contracts` 的 JSON ABI。
-3. 轻量模板可以手写 ABI，但必须在验证清单中检查它和 artifact 一致。
+1. TypeChain and Hardhat artifacts.
+2. JSON ABIs generated into `packages/frontend/src/contracts`.
+3. Lightweight templates may include handwritten ABIs, but the validation checklist must verify that they match the artifacts.
 
-## 部署注意事项
+## Deployment Notes
 
-- Sepolia 使用 Zama 官方 FHEVM host contracts 和 relayer config，不要把 local/mock host stack 部署到 Sepolia。
-- 不要把 private key 写进 `.env`。Hardhat vars 也只是本地明文，生产应使用更安全 signer。
-- 如果 `.env` 存放非 secret RPC URL，部署 wrapper/task 需要显式加载；不要依赖 `pnpm run` 自动加载。
-- Hardhat task 中涉及 encrypted input 或 decrypt 时，先按 Hardhat skill 初始化 plugin CLI API。
+- Sepolia uses Zama's official FHEVM host contracts and relayer configuration. Do not deploy a local/mock host stack to Sepolia.
+- Do not put private keys in `.env`. Hardhat vars are also local plaintext; production should use a more secure signer.
+- If `.env` stores non-secret RPC URLs, deployment wrappers/tasks must load it explicitly. Do not rely on `pnpm run` to load it automatically.
+- When a Hardhat task handles encrypted input or decrypt flows, initialize the plugin CLI API according to the Hardhat skill first.
 
-## 验证清单
+## Validation Checklist
 
-- `packages/contract`：Hardhat compile、mock tests、TypeChain 生成。
-- 合约测试：至少覆盖 encrypted input、运算、ACL、proof target 错误。
-- `packages/frontend`：typecheck/build/test。
-- local：明确这是 mock-only、SDK-compatible local，还是直接指向 Sepolia。
-- Sepolia：deploy command 要么成功，要么在 signer/RPC 配置缺失时清晰失败。
-- SDK smoke：可行时完成一笔 encrypt/write/read/decrypt。
-- README：说明 packages 结构、local/mock/Sepolia 区别、前端配置、service 可选职责和用户必须提供的 secret/resource。
+- `packages/contract`: Hardhat compile, mock tests, and TypeChain generation.
+- Contract tests: cover at least encrypted input, computation, ACL, and incorrect proof target cases.
+- `packages/frontend`: typecheck, build, and test.
+- Local: state clearly whether the setup is mock-only, SDK-compatible local, or points directly to Sepolia.
+- Sepolia: the deploy command either succeeds or fails clearly when signer/RPC configuration is missing.
+- SDK smoke: when feasible, complete one encrypt/write/read/decrypt flow.
+- README: explain the package structure, local/mock/Sepolia differences, frontend configuration, optional service responsibilities, and the secrets/resources users must provide.

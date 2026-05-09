@@ -1,104 +1,104 @@
 ---
 name: zama-fullstack-dapp
-description: 编排完整 Zama FHEVM dApp 时使用，覆盖 Solidity 合约、Hardhat 或 Foundry、本地开发链、Sepolia/mainnet 部署、@zama-fhe/sdk 或 @zama-fhe/react-sdk、React/Node 客户端、ABI/地址 artifact、monorepo 结构和端到端验证。
+description: Use when orchestrating a complete Zama FHEVM dApp across Solidity contracts, Hardhat or Foundry, local development chains, Sepolia/mainnet deployment, @zama-fhe/sdk or @zama-fhe/react-sdk, React/Node clients, ABI/address artifacts, monorepo structure, and end-to-end validation.
 ---
 
 # Zama Fullstack dApp
 
-本 skill 是完整 dApp 的编排层。它不提供具体 API 示例，也不替代框架 skill；它负责告诉 agent 应该去哪里找资料、如何把合约、部署、SDK、前端和可选后端串起来。
+This skill is the orchestration layer for complete dApps. It does not provide concrete API examples, and it does not replace framework-specific skills. Its role is to tell the agent where to find the right material and how to connect contracts, deployment, SDK usage, frontend code, and optional backend services.
 
-## 何时使用
+## When to Use
 
-当任务跨越两个或更多层次时使用：
+Use this skill when a task spans two or more layers:
 
-- FHEVM Solidity 合约 + 前端
-- 合约部署 + SDK 调用
-- local/Sepolia 双网络 dApp
-- React/Node 客户端加密输入和解密
-- ABI/地址 artifact 同步
-- monorepo 模板、README、端到端验证
+- FHEVM Solidity contract plus frontend
+- Contract deployment plus SDK calls
+- Dual-network local/Sepolia dApp
+- React/Node client-side encrypted input and decryption
+- ABI/address artifact synchronization
+- Monorepo templates, README files, and end-to-end validation
 
-如果只是写单个合约函数、单个测试或单个 SDK 调用，不需要本 skill，直接使用对应具体 skill。
+If the task is only to write a single contract function, a single test, or a single SDK call, do not use this skill. Use the corresponding focused skill directly.
 
-## 总加载顺序
+## Overall Loading Order
 
-1. 先读本文件，确定层次边界和工作顺序。
-2. 判断合约框架：
-   - Foundry/Forge：读 `references/foundry/README.md`。
-   - Hardhat：读 `references/hardhat/README.md`。
-3. 合约业务逻辑、encrypted types、ACL、decryption 设计：读 `zama-fhevm-solidity-core`。
-4. 合约框架、测试、部署：
-   - Foundry：读 `zama-foundry-forge-fhevm`。
-   - Hardhat：读 `zama-hardhat-contract-dev`。
-5. 前端、Node、relayer runtime、signer、storage、encrypted input、user/public decrypt：读 `zama-sdk`。
-6. 涉及安全、ACL、public decrypt、replay、mock-vs-production 差异：读 `zama-fhevm-security-review`。
+1. Read this file first to establish layer boundaries and the work sequence.
+2. Identify the contract framework:
+   - Foundry/Forge: read `references/foundry/README.md`.
+   - Hardhat: read `references/hardhat/README.md`.
+3. For contract business logic, encrypted types, ACL, and decryption design, read `zama-fhevm-solidity-core`.
+4. For the contract framework, tests, and deployment:
+   - Foundry: read `zama-foundry-forge-fhevm`.
+   - Hardhat: read `zama-hardhat-contract-dev`.
+5. For frontend, Node, relayer runtime, signer, storage, encrypted input, and user/public decrypt flows, read `zama-sdk`.
+6. For security, ACL, public decrypt, replay protection, and mock-vs-production differences, read `zama-fhevm-security-review`.
 
-如果用户没有指定框架，先检查仓库结构。空项目中，优先尊重用户偏好；没有偏好时，Foundry 更适合 Forge/本地 cleartext/e2e 快速模板，Hardhat 更适合 TypeScript-first、Hardhat deploy、TypeChain 和 task 工作流。
+If the user has not specified a framework, inspect the repository structure first. In an empty project, prioritize the user's preference. If there is no preference, Foundry is a better fit for Forge-oriented, local cleartext, and quick end-to-end templates; Hardhat is a better fit for TypeScript-first workflows, Hardhat Deploy, TypeChain, and task-based automation.
 
-## 推荐 Monorepo 边界
+## Recommended Monorepo Boundaries
 
-统一使用 packages 结构：
+Use a consistent `packages` layout:
 
 ```text
 packages/
-├── contract/   # 合约、合约测试、部署脚本、合约 artifacts
-├── frontend/   # React/Vite/Next 前端
-└── service/    # 可选：relayer proxy、server jobs、Node SDK smoke tests
+├── contract/   # Contracts, contract tests, deployment scripts, contract artifacts
+├── frontend/   # React/Vite/Next frontend
+└── service/    # Optional: relayer proxy, server jobs, Node SDK smoke tests
 ```
 
-职责边界：
+Responsibility boundaries:
 
-- `packages/contract` 是 canonical ABI/address artifact 来源。
-- `packages/frontend` 只消费 ABI/address artifact，不应该成为唯一部署地址来源。
-- `packages/service` 只在需要后端 proxy、server-side decrypt、public decrypt finalize job、定时任务或私有 relayer credentials 时添加。
-- 根目录脚本只做编排，具体命令下发到对应 package。
+- `packages/contract` is the canonical source for ABI/address artifacts.
+- `packages/frontend` only consumes ABI/address artifacts. It should not become the sole source of deployment addresses.
+- `packages/service` is added only when the app needs a backend proxy, server-side decrypt flow, public decrypt finalization job, scheduled job, or private relayer credentials.
+- Root scripts should only orchestrate commands and delegate concrete work to the relevant package.
 
-## 串联顺序
+## Integration Sequence
 
-1. 合约设计
-   先用 `zama-fhevm-solidity-core` 明确 encrypted input、handle 生命周期、ACL、user/public decrypt、运算边界。
+1. Contract design
+   Use `zama-fhevm-solidity-core` first to define encrypted inputs, handle lifecycles, ACL, user/public decrypt flows, and arithmetic boundaries.
 
-2. 框架落地
-   用 Foundry 或 Hardhat skill 搭建 `packages/contract`，包括依赖、测试、部署脚本和本地/测试网配置。
+2. Framework implementation
+   Use the Foundry or Hardhat skill to build `packages/contract`, including dependencies, tests, deployment scripts, and local/testnet configuration.
 
-3. Artifact 设计
-   部署脚本把 ABI 和地址写到 `packages/contract/deployments/`，再生成或复制前端消费文件到 `packages/frontend/src/contracts/`。地址必须按 chain id 区分，不能只保留“最近一次部署”。
+3. Artifact design
+   Deployment scripts should write ABI and address data to `packages/contract/deployments/`, then generate or copy frontend-consumable files into `packages/frontend/src/contracts/`. Addresses must be separated by chain ID; never keep only "the latest deployment".
 
-4. SDK runtime 选择
-   用 `zama-sdk` 判断运行环境：
-   - browser/frontend：`RelayerWeb`
-   - Node/service：`RelayerNode`
-   - local cleartext demo：`RelayerCleartext`
+4. SDK runtime selection
+   Use `zama-sdk` to choose the runtime environment:
+   - Browser/frontend: `RelayerWeb`
+   - Node/service: `RelayerNode`
+   - Local cleartext demo: `RelayerCleartext`
 
-5. 前端或 Node 连接合约
-   用 `zama-sdk` 的 custom-contracts、React/wagmi、Node/local references 设计：encrypt input -> submit transaction -> read handle -> authorize decrypt -> user/public decrypt。
+5. Frontend or Node contract integration
+   Use the `zama-sdk` custom-contracts, React/wagmi, and Node/local references to design this flow: encrypt input -> submit transaction -> read handle -> authorize decrypt -> user/public decrypt.
 
-6. 可选后端
-   只有当需要隐藏 relayer API key、提供 proxy、执行 public decrypt finalize、后台监听链上事件或服务端 smoke test 时，才创建 `packages/service`。
+6. Optional backend
+   Create `packages/service` only when the app needs to hide a relayer API key, provide a proxy, run public decrypt finalization, listen to on-chain events in the background, or execute server-side smoke tests.
 
-7. 验证和 README
-   README 必须把 install、local、Sepolia、frontend、service、test/build 和 required secrets 讲清楚。不能只说“配置 env 后运行”。
+7. Validation and README
+   The README must clearly document install, local, Sepolia, frontend, service, test/build, and required secrets. Do not stop at "configure env and run".
 
-## 必须守住的集成点
+## Critical Integration Points
 
-- `sdk.relayer.encrypt` 的 `contractAddress` 必须是合约中实际调用 `FHE.fromExternal` 的地址。
-- handles 和 input proof 必须来自同一次 encryption。
-- decrypt 时 handle 必须搭配拥有该 handle 的合约地址。
-- user decrypt 需要明确授权动作或 gate，不能在 render 阶段自动弹签名。
-- account 或 chain 变化时清理旧 handle、旧 decrypted value 和旧 session 假设。
-- local、Sepolia、mainnet 地址 artifact 必须按 chain id 区分。
-- `.env` 不会被 npm/pnpm script 自动读取；部署命令需要 wrapper 或明确 source。
-- browser 不能接收私有 relayer API key；需要 key 时通过 `packages/service` proxy。
-- mock/local cleartext 成功不代表生产 user decrypt 成功。
+- The `contractAddress` passed to `sdk.relayer.encrypt` must be the address of the contract that actually calls `FHE.fromExternal`.
+- Handles and input proofs must come from the same encryption operation.
+- During decrypt flows, each handle must be paired with the contract address that owns that handle.
+- User decrypt requires an explicit authorization action or gate. Do not trigger wallet signatures automatically during render.
+- When the account or chain changes, clear stale handles, decrypted values, and session assumptions.
+- Local, Sepolia, and mainnet address artifacts must be separated by chain ID.
+- `.env` files are not loaded automatically by npm/pnpm scripts; deployment commands need a wrapper or an explicit source step.
+- Browsers must not receive private relayer API keys. If a key is required, route through a `packages/service` proxy.
+- A successful mock/local cleartext flow does not prove that production user decrypt will work.
 
-## 验收门槛
+## Acceptance Criteria
 
-完整 dApp 结束前，至少检查：
+Before completing a full dApp task, check at least the following:
 
-- 合约 compile。
-- 合约测试覆盖成功路径和 ACL/proof 失败路径。
-- 前端 typecheck 和 production build。
-- 前端至少有一个非纯工具函数的交互或状态流测试；如果做不到，说明缺口。
-- local 部署路径可执行或文档清晰。
-- Sepolia 部署命令在缺少 RPC、account、keystore 时能早失败并给清楚提示。
-- 可行时执行 SDK smoke path：encrypt input、submit transaction、read handle、decrypt result。
+- Contract compilation.
+- Contract tests cover the success path and ACL/proof failure paths.
+- Frontend typecheck and production build.
+- At least one frontend interaction or state-flow test that is not merely a pure utility test. If this is not feasible, document the gap.
+- The local deployment path is executable or clearly documented.
+- Sepolia deployment commands fail early with clear messages when RPC, account, or keystore configuration is missing.
+- When feasible, run an SDK smoke path: encrypt input, submit transaction, read handle, and decrypt result.
