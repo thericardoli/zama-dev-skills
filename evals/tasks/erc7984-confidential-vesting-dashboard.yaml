@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../schema/task.schema.json
+id: erc7984-confidential-vesting-dashboard
+description: Build a complete ERC7984 confidential vesting dashboard with Foundry contracts, React + wagmi frontend flows, encrypted allocations, tests, and deployment artifacts.
+
+prompt: |
+  Implement a complete ERC7984 confidential vesting dashboard in the current empty workspace. You may reference the ERC7984 and Vesting Wallet examples in the Zama documentation, but this must be a minimal complete project that can be tested, deployed, and used from a frontend, not a single example contract.
+
+  Feature requirements:
+  - Create a monorepo. The recommended structure is `packages/contract` and `packages/frontend`.
+  - `packages/contract` must use Foundry/forge-fhevm. Do not use Hardhat.
+  - `packages/frontend` must use React + wagmi.
+  - The contract package must include an example ERC7984 confidential token and a confidential vesting contract.
+  - The admin can configure encrypted allocation, start timestamp, and duration for multiple beneficiaries.
+  - A beneficiary can use user decryption to view their own allocation, released, or releasable information; other addresses must not be able to decrypt it.
+  - A beneficiary can release vested ERC7984 confidential tokens after time advances.
+  - Releases must not exceed the vested amount, and must not over-release because of encrypted arithmetic wraparound or incorrect ACLs.
+  - Persistent encrypted handles must have the required ACLs set, and the permission boundaries between the admin, beneficiary, and contract itself must be clear.
+  - The frontend must include an admin page or area and a beneficiary page or area: the admin configures vesting, and beneficiaries view/decrypt status and release tokens.
+  - Deployment scripts must generate ABI/address artifacts separated by chain id, and the frontend must consume contract addresses and ABIs from those artifacts.
+  - The README must clearly document installation, testing, build, local deployment, frontend execution, and the expected failure messages when Sepolia configuration is missing.
+
+  Testing and acceptance requirements:
+  - Contract tests must cover vesting creation, multiple beneficiaries, non-admins being unable to configure vesting, non-beneficiaries being unable to use user decryption, early release, partial release, full release, repeated release, invalid input proofs or incorrect caller/context, and duration/start boundary cases.
+  - Include at least one frontend or SDK smoke test covering beneficiary decrypt -> release -> status update.
+  - Provide and run the following commands, or equivalent commands in the project, as much as possible:
+    - Install dependencies.
+    - `forge build`.
+    - `forge test`.
+    - Frontend typecheck.
+    - Frontend production build.
+    - Foundry local deployment or deployment smoke test.
+  - In the final response, list the commands that were actually run and their results. If any command cannot be run because of external network, registry, wallet, or RPC limitations, explain the specific reason and provide reproducible steps within the project.
+
+codex:
+  model: gpt-5.5
+  think_level: xhigh
+  timeout_sec: 2400
+  fast_mode: true
+
+baseline: true
+skills: all

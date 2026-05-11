@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../schema/task.schema.json
+id: erc7984-confidential-vault
+description: Build a complete ERC7984 confidential token vault dApp with Foundry contracts, React + wagmi frontend integration, tests, deployment artifacts, and security checks.
+
+prompt: |
+  Implement a complete ERC7984 confidential token Vault dApp in the current empty workspace. You need to extend it into a minimal complete project that can be tested, deployed, and used from a frontend.
+
+  Feature requirements:
+  - Create a monorepo. The recommended structure is `packages/contract` and `packages/frontend`.
+  - `packages/contract` must use Foundry/forge-fhevm. Do not use Hardhat.
+  - `packages/frontend` must use React + wagmi.
+  - The contract package must include an example ERC7984 confidential token and a `ConfidentialVault` contract.
+  - Users can deposit ERC7984 tokens into the vault, and the vault records each user's encrypted shares or encrypted deposited balance.
+  - Users can withdraw a confidential amount that does not exceed their own vault balance; the implementation must not rely on plaintext balance checks in a way that breaks privacy.
+  - Users can use user decryption to view their own vault balance; other users must not be able to decrypt it.
+  - If the underlying ERC7984 transfer/transferFrom has effective transferred amount or silent failure semantics, the vault must update accounting from the actual result instead of blindly trusting the requested amount.
+  - Persistent encrypted handles must have the required ACLs set, avoiding behavior that only works in mock tests.
+  - The frontend must support connecting a wallet, viewing token/vault addresses, shielding or preparing a test balance, depositing, withdrawing, requesting vault balance decryption, and displaying transaction and error states.
+  - Deployment scripts must generate ABI/address artifacts separated by chain id, and the frontend must consume contract addresses and ABIs from those artifacts.
+  - The README must clearly document installation, testing, build, local deployment, frontend execution, and the expected failure messages when Sepolia configuration is missing.
+
+  Testing and acceptance requirements:
+  - Contract tests must cover deposit, withdraw, insufficient-balance paths, invalid input proofs or incorrect caller/context, non-owners being unable to use user decryption, ACL authorization boundaries, and encrypted accounting after deposit/withdraw being correctly decryptable by authorized users.
+  - Include at least one SDK-level or frontend-level token/vault flow test. If a real Relayer or browser environment is unavailable, provide a local cleartext or mock equivalent smoke test.
+  - Provide and run the following commands, or equivalent commands in the project, as much as possible:
+    - Install dependencies.
+    - `forge build`.
+    - `forge test`.
+    - Frontend typecheck.
+    - Frontend production build.
+    - Foundry local deployment or deployment smoke test.
+  - In the final response, list the commands that were actually run and their results. If any command cannot be run because of external network, registry, wallet, or RPC limitations, explain the specific reason and provide reproducible steps within the project.
+
+codex:
+  model: gpt-5.5
+  think_level: xhigh
+  timeout_sec: 2400
+  fast_mode: true
+
+baseline: false
+skills: all

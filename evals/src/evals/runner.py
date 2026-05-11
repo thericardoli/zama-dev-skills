@@ -135,6 +135,7 @@ def prepare_eval_run(
         "run_dir": run_dir,
         "workspace": workspace,
         "result": run_dir / "result.json",
+        "codex_events": run_dir / "codex-events.jsonl",
         "worker_log": run_dir / "worker.log",
     }
 
@@ -267,25 +268,34 @@ def print_run_summary(
     dry_run: bool,
 ) -> None:
     if dry_run:
-        print("dry-run 已准备以下 eval run：")
+        print("dry-run prepared the following eval run(s):")
     else:
-        print("已在后台启动以下 eval run，终端可以关闭或继续使用：")
+        print(
+            "Started the following eval run(s) in the background; "
+            "you can close or keep using this terminal:"
+        )
 
     for prepared in prepared_runs:
         run_name = str(prepared["run_name"])
         workspace = repo_relative_path(Path(prepared["workspace"]), paths)
         result = repo_relative_path(Path(prepared["result"]), paths)
-        worker_log = repo_relative_path(Path(prepared["worker_log"]), paths)
+        codex_events = repo_relative_path(Path(prepared["codex_events"]), paths)
         print(f"- {run_name}")
         print(f"  workspace: {workspace}")
         print(f"  result:    {result}")
         if not dry_run:
-            print(f"  log:       {worker_log}")
+            print(f"  codex-events: {codex_events}")
 
     if dry_run:
-        print("dry-run 不会执行 Codex；确认 metadata.json、result.json 和 workspace 即可。")
+        print(
+            "dry-run does not invoke Codex; "
+            "inspect metadata.json, result.json, and workspace."
+        )
     else:
-        print("后续查看 result.json、codex-events.md、codex.stderr.log 和 workspace 即可。")
+        print(
+            "Inspect result.json, codex-events.jsonl, codex.stderr.log, "
+            "and workspace for results."
+        )
 
 
 def run_codex(
@@ -432,16 +442,16 @@ def render_codex_events_report(
     usage = latest_turn_usage(events)
 
     lines = [
-        "# Codex 事件报告",
+        "# Codex Event Report",
         "",
-        "## 摘要",
+        "## Summary",
         "",
-        f"- 事件数: `{len(events)}`",
-        f"- 对话轮次: `{count_events(events, 'turn.started')}`",
-        f"- 助手消息: `{len(agent_messages)}`",
-        f"- 命令执行: `{len(commands)}`",
-        f"- 文件变更: `{len(file_changes)}`",
-        f"- 异常命令: `{len(failed_commands)}`",
+        f"- Events: `{len(events)}`",
+        f"- Turns: `{count_events(events, 'turn.started')}`",
+        f"- Agent messages: `{len(agent_messages)}`",
+        f"- Command executions: `{len(commands)}`",
+        f"- File changes: `{len(file_changes)}`",
+        f"- Failed commands: `{len(failed_commands)}`",
     ]
     if thread_ids:
         lines.append(f"- Thread ID: `{thread_ids[-1]}`")
@@ -451,14 +461,14 @@ def render_codex_events_report(
         ]
         lines.append(f"- Token usage: {', '.join(usage_parts)}")
     if invalid_lines:
-        lines.append(f"- 无法解析的 JSONL 行: `{len(invalid_lines)}`")
+        lines.append(f"- Invalid JSONL lines: `{len(invalid_lines)}`")
 
     if invalid_lines:
-        lines.extend(["", "## 解析警告", ""])
+        lines.extend(["", "## Parse Warnings", ""])
         lines.extend(f"- {line}" for line in invalid_lines)
 
     if failed_commands:
-        lines.extend(["", "## 异常命令", ""])
+        lines.extend(["", "## Failed Commands", ""])
         for command in failed_commands:
             lines.append(
                 "- "
@@ -467,9 +477,9 @@ def render_codex_events_report(
                 f"`{single_line(command.get('command'))}`"
             )
 
-    lines.extend(["", "## 时间线", ""])
+    lines.extend(["", "## Timeline", ""])
     if not timeline:
-        lines.append("_没有 item 事件。_")
+        lines.append("_No item events._")
     for index, (item_id, item) in enumerate(timeline, start=1):
         lines.extend(render_codex_timeline_item(index, item_id, item))
         lines.append("")
@@ -522,15 +532,15 @@ def render_codex_timeline_item(
 ) -> list[str]:
     item_type = str(item.get("type") or "unknown")
     title = {
-        "agent_message": "助手消息",
-        "command_execution": "命令执行",
-        "file_change": "文件变更",
+        "agent_message": "Agent Message",
+        "command_execution": "Command Execution",
+        "file_change": "File Change",
     }.get(item_type, item_type)
     lines = [f"### {index}. {title} `{item_id}`"]
 
     if item_type == "agent_message":
         text = str(item.get("text") or "").strip()
-        lines.extend(["", text or "_空消息_"])
+        lines.extend(["", text or "_Empty message_"])
         return lines
 
     if item_type == "command_execution":

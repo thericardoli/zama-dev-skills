@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../schema/task.schema.json
+id: fullstack-sealed-bid-auction
+description: Build a complete sealed-bid auction dApp with Foundry contracts, React + wagmi frontend integration, encrypted bids, tests, and deployment artifacts.
+
+prompt: |
+  Implement a complete Zama FHEVM sealed-bid auction dApp in the current empty workspace.
+
+  Feature requirements:
+  - Create a monorepo. The recommended structure is `packages/contract` and `packages/frontend`.
+  - `packages/contract` must use Foundry/forge-fhevm. Do not use Hardhat.
+  - `packages/frontend` must use React + wagmi.
+  - A seller can create an auction with the necessary information, such as item name, bidding deadline, and minimum bid.
+  - Buyers submit encrypted bids. Each bid must enter the contract through `externalEuint*` and an input proof.
+  - During bidding, no one can publicly see any bid; users can only use user decryption to view their own bid receipt.
+  - Each address may keep only one active bid. Duplicate bids must either be rejected or explicitly overwrite the old bid, while keeping ACLs correct.
+  - After the auction ends, the contract can trigger public decryption or async finalization to obtain the winner and winning bid. Finalization must prevent repeated execution and cross-request proof reuse.
+  - The finalization design must include a request id/status/deadline or an equivalent mechanism, and must not rely only on a bare callback.
+  - The frontend must support connecting a wallet, submitting encrypted bids, viewing the user's own bid, ending/finalizing the auction, showing the winner and winning bid, and displaying transaction and error states.
+  - Deployment scripts must generate ABI/address artifacts separated by chain id, and the frontend must consume contract addresses and ABIs from those artifacts.
+  - The README must clearly document installation, testing, build, local deployment, frontend execution, and the expected failure messages when Sepolia configuration is missing.
+
+  Testing and acceptance requirements:
+  - Contract tests must cover successful bidding, inability to bid after the deadline, duplicate bid policy, invalid input proofs or incorrect caller/context, non-owners being unable to use user decryption for bids, inability to finalize before the auction ends, inability to execute finalization repeatedly, and invalid public decrypt proof/order being rejected.
+  - Include at least one frontend or SDK smoke test covering the encrypt bid -> submit -> read receipt/status state flow.
+  - Provide and run the following commands, or equivalent commands in the project, as much as possible:
+    - Install dependencies.
+    - `forge build`.
+    - `forge test`.
+    - Frontend typecheck.
+    - Frontend production build.
+    - Foundry local deployment or deployment smoke test.
+  - In the final response, list the commands that were actually run and their results. If any command cannot be run because of external network, registry, wallet, or RPC limitations, explain the specific reason and provide reproducible steps within the project.
+
+codex:
+  model: gpt-5.5
+  think_level: xhigh
+  timeout_sec: 2400
+  fast_mode: true
+
+baseline: true
+skills: all

@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../schema/task.schema.json
+id: fullstack-confidential-voting
+description: Build a complete confidential voting dApp with Foundry contracts, React + wagmi frontend flows, deployment artifacts, and security review.
+
+prompt: |
+  Implement a complete Zama FHEVM confidential voting dApp in the current empty workspace. The goal of this task is not to write only a contract example, but to produce a minimal complete project that can be installed, tested, built, deployed to a local network, and called from a frontend.
+
+  Feature requirements:
+  - Create a monorepo. The recommended structure is `packages/contract` and `packages/frontend`.
+  - `packages/contract` must use Foundry/forge-fhevm. Do not use Hardhat.
+  - `packages/frontend` must use React + wagmi.
+  - The contract must allow an admin to create a vote with at least 2 candidates.
+  - Users submit encrypted votes. Each vote must enter the contract through `externalEuint*`/`externalEbool` and an input proof; the contract must not directly treat `bytes32` as trusted ciphertext.
+  - Each address can vote only once. Duplicate votes must be rejected or handled through an explicit failure path.
+  - Final vote counts must not be public before the vote closes. After closing, the contract may trigger public decryption or expose public results.
+  - Users can use user decryption to view their own voting receipt, but other users must not be able to decrypt that receipt.
+  - Newly created or updated persistent encrypted handles must have the required ACLs set, such as `allowThis` when the contract needs to continue computing on them later.
+  - The frontend must support connecting a wallet, selecting a candidate, encrypting and submitting a vote, showing transaction status, viewing the user's own receipt, and viewing final public results.
+  - Deployment scripts must generate ABI/address artifacts separated by chain id, and the frontend must consume contract addresses and ABIs from those artifacts instead of hardcoding "latest" addresses.
+  - The README must clearly document installation, testing, build, local deployment, frontend execution, and the expected failure messages when Sepolia configuration is missing.
+
+  Testing and acceptance requirements:
+  - Contract tests must cover successful voting, duplicate voting, invalid input proofs or incorrect caller/context, unauthorized user decryption, inability to publish results before closing, and ability to obtain results after closing.
+  - Include at least one frontend interaction or state-flow test. If framework limitations make this infeasible, clearly explain why in the README and provide an equivalent smoke script.
+  - Provide and run the following commands, or equivalent commands in the project, as much as possible:
+    - Install dependencies.
+    - `forge build`.
+    - `forge test`.
+    - Frontend typecheck.
+    - Frontend production build.
+    - Foundry local deployment or deployment smoke test.
+  - In the final response, list the commands that were actually run and their results. If any command cannot be run because of external network, registry, wallet, or RPC limitations, explain the specific reason and provide reproducible steps within the project.
+
+codex:
+  model: gpt-5.5
+  think_level: xhigh
+  timeout_sec: 2400
+  fast_mode: true
+
+baseline: true
+skills: all

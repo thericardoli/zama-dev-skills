@@ -22,11 +22,13 @@ def render_task_template(task_id: str) -> str:
 id: {task_id}
 
 prompt: |
-  TODO: 写清楚 Codex 需要完成的任务和验收标准。
+  TODO: Describe the task Codex should complete and the acceptance criteria.
 
-# fixture 可选。配置后 runner 会先把对应文件或目录复制到每次 run 的 workspace。
-# 路径相对 evals/，推荐把初始项目放在 evals/fixtures/<task-id>/。
-# 示例：
+# fixture is optional. When configured, the runner copies the file or directory
+# into each run's workspace before starting Codex.
+# Paths are relative to evals/. Prefer storing initial projects under
+# evals/fixtures/<task-id>/.
+# Examples:
 # fixture: fixtures/{task_id}
 # fixture: fixtures/{task_id}/README.md
 
