@@ -3,6 +3,7 @@ name = "evals"
 version = "0.1.0"
 description = "Codex CLI eval runner for Zama protocol development skills"
 readme = "README.md"
+license = "Apache-2.0"
 authors = [
     { name = "thericardoli", email = "104179920+thericardoli@users.noreply.github.com" }
 ]
