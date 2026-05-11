@@ -112,6 +112,21 @@ evals/runs/<task-id>/(baseline|skills)/<timestamp>/
 
 Common artifacts include `result.json`, `worker.log`, `prompt.md`, `codex-events.md`, `last-message.md`, `git-status.txt`, `diff.patch`, and the final `workspace/`.
 
+## Upstream Monitoring
+
+Upstream Zama and related package sources are listed in [upstream-sources.yaml](upstream-sources.yaml). The scheduled GitHub Actions workflow in [.github/workflows/check-upstream.yml](.github/workflows/check-upstream.yml) checks them every five days, updates [upstream-state.json](upstream-state.json), and opens an issue when a tracked source changes.
+
+Run the checker manually with:
+
+```bash
+python scripts/check_upstream.py \
+  --sources upstream-sources.yaml \
+  --state upstream-state.json \
+  --report /tmp/upstream-report.md \
+  --summary /tmp/upstream-summary.json \
+  --force
+```
+
 ## License
 
 This repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).

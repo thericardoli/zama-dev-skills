@@ -1,0 +1,50 @@
+version: 1
+sources:
+  - id: fhevm
+    kind: github-release
+    repo: zama-ai/fhevm
+    affects:
+      - skills/zama-fhevm-solidity-core
+      - skills/zama-hardhat-contract-dev
+      - skills/zama-foundry-forge-fhevm
+      - skills/zama-fullstack-dapp
+      - skills/zama-fhevm-security-review
+
+  - id: forge-fhevm
+    kind: github-branch
+    repo: zama-ai/forge-fhevm
+    branch: main
+    affects:
+      - skills/zama-foundry-forge-fhevm
+      - skills/zama-fullstack-dapp
+
+  - id: zama-sdk
+    kind: github-release
+    repo: zama-ai/sdk
+    affects:
+      - skills/zama-sdk
+      - skills/zama-fullstack-dapp
+
+  - id: fhevm-mocks
+    kind: github-release
+    repo: zama-ai/fhevm-mocks
+    affects:
+      - skills/zama-hardhat-contract-dev
+      - skills/zama-fhevm-security-review
+
+  - id: openzeppelin-confidential-contracts
+    kind: github-release
+    repo: OpenZeppelin/openzeppelin-confidential-contracts
+    affects:
+      - skills/zama-fhevm-solidity-core
+      - skills/zama-fhevm-security-review
+
+  - id: fhevm-solidity-package
+    kind: npm
+    package: "@fhevm/solidity"
+    affects:
+      - skills/zama-fhevm-solidity-core
+      - skills/zama-hardhat-contract-dev
+      - skills/zama-foundry-forge-fhevm
+      - skills/zama-fullstack-dapp
+      - skills/zama-fhevm-security-review
