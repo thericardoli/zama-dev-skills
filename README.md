@@ -1,25 +1,25 @@
 # Zama Dev Skills
 
-General-purpose agent skills for Zama FHEVM and protocol development, plus a lightweight eval runner that uses the OpenAI Codex CLI to assess skill quality.
+Agent skills for Zama FHEVM and protocol development, plus a lightweight eval runner that uses the OpenAI Codex CLI to assess skill quality.
 
 ## Project Structure
 
 ```text
-skills/   General agent skills; each subdirectory is an installable skill
+skills/   Agent skills; each subdirectory is an installable skill
 evals/    Lightweight eval runner for measuring skill quality
 ```
 
-## Included Skills
+## Available Skills
 
 | Skill | Purpose |
 | --- | --- |
-| `zama-protocol-dev` | Routes Zama development tasks and decides which specialized skills should be combined. |
-| `zama-fhevm-solidity-core` | Contract development with `@fhevm/solidity`, including encrypted types, ACLs, encrypted inputs, and decryption patterns. |
-| `zama-hardhat-contract-dev` | Hardhat project setup, testing, deployment, mock mode, Sepolia workflows, and mainnet-oriented guidance. |
-| `zama-foundry-forge-fhevm` | Foundry and `forge-fhevm` project setup, testing, deployment, and fuzzing workflows. |
-| `zama-sdk` | Integrating TypeScript, React, and Node applications with Zama contracts, including SDK runtime setup, wallet integration, encrypted inputs, decryption, and ERC7984 token flows. |
-| `zama-fullstack-dapp` | End-to-end dApp workflows across contracts, deployment, SDK usage, frontend, backend, and artifact coordination. |
-| `zama-fhevm-security-review` | Security review, threat modeling, and remediation checklists for FHEVM contracts and SDK/frontend integrations. |
+| [zama-protocol-dev](skills/zama-protocol-dev/SKILL.md) | Routes Zama development tasks and decides which specialized skills should be combined. |
+| [zama-fhevm-solidity-core](skills/zama-fhevm-solidity-core/SKILL.md) | Contract development with `@fhevm/solidity`, including encrypted types, ACLs, encrypted inputs, and decryption patterns. |
+| [zama-hardhat-contract-dev](skills/zama-hardhat-contract-dev/SKILL.md) | Hardhat project setup, testing, deployment, mock mode, Sepolia workflows, and mainnet-oriented guidance. |
+| [zama-foundry-forge-fhevm](skills/zama-foundry-forge-fhevm/SKILL.md) | Foundry and `forge-fhevm` project setup, testing, deployment, and fuzzing workflows. |
+| [zama-sdk](skills/zama-sdk/SKILL.md) | Integrating TypeScript, React, and Node applications with Zama contracts, including SDK runtime setup, wallet integration, encrypted inputs, decryption, and ERC7984 token flows. |
+| [zama-fullstack-dapp](skills/zama-fullstack-dapp/SKILL.md) | End-to-end dApp workflows across contracts, deployment, SDK usage, frontend, backend, and artifact coordination. |
+| [zama-fhevm-security-review](skills/zama-fhevm-security-review/SKILL.md) | Security review, threat modeling, and remediation checklists for FHEVM contracts and SDK/frontend integrations. |
 
 ## Install with `npx skills`
 
