@@ -1,5 +1,5 @@
 {
-  "last_checked_at": "2026-05-27T04:50:02Z",
+  "last_checked_at": "2026-06-01T04:57:16Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
@@ -28,10 +28,10 @@
     "forge-fhevm": {
       "branch": "main",
       "kind": "github-branch",
-      "name": "main@28accda47ad1",
+      "name": "main@ff2b790db8cd",
       "repo": "zama-ai/forge-fhevm",
-      "url": "https://github.com/zama-ai/forge-fhevm/commit/28accda47ad13031fcd202609ccd67d3aadc2eb1",
-      "version": "28accda47ad13031fcd202609ccd67d3aadc2eb1"
+      "url": "https://github.com/zama-ai/forge-fhevm/commit/ff2b790db8cdc34894754d670b174b2b7e27e373",
+      "version": "ff2b790db8cdc34894754d670b174b2b7e27e373"
     },
     "openzeppelin-confidential-contracts": {
       "kind": "github-release",
@@ -43,11 +43,11 @@
     },
     "zama-sdk": {
       "kind": "github-release",
-      "name": "v3.0.0",
-      "published_at": "2026-04-22T17:15:18Z",
+      "name": "v3.0.1",
+      "published_at": "2026-05-28T12:51:14Z",
       "repo": "zama-ai/sdk",
-      "url": "https://github.com/zama-ai/sdk/releases/tag/v3.0.0",
-      "version": "v3.0.0"
+      "url": "https://github.com/zama-ai/sdk/releases/tag/v3.0.1",
+      "version": "v3.0.1"
     }
   },
   "version": 1
