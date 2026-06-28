@@ -1,5 +1,5 @@
 {
-  "last_checked_at": "2026-06-22T04:57:36Z",
+  "last_checked_at": "2026-06-28T04:50:40Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
@@ -35,19 +35,19 @@
     },
     "openzeppelin-confidential-contracts": {
       "kind": "github-release",
-      "name": "v0.5.0",
-      "published_at": "2026-06-17T15:19:32Z",
+      "name": "v0.5.1",
+      "published_at": "2026-06-22T23:41:44Z",
       "repo": "OpenZeppelin/openzeppelin-confidential-contracts",
-      "url": "https://github.com/OpenZeppelin/openzeppelin-confidential-contracts/releases/tag/v0.5.0",
-      "version": "v0.5.0"
+      "url": "https://github.com/OpenZeppelin/openzeppelin-confidential-contracts/releases/tag/v0.5.1",
+      "version": "v0.5.1"
     },
     "zama-sdk": {
       "kind": "github-release",
-      "name": "v3.0.1",
-      "published_at": "2026-05-28T12:51:14Z",
+      "name": "v3.2.0",
+      "published_at": "2026-06-24T18:31:36Z",
       "repo": "zama-ai/sdk",
-      "url": "https://github.com/zama-ai/sdk/releases/tag/v3.0.1",
-      "version": "v3.0.1"
+      "url": "https://github.com/zama-ai/sdk/releases/tag/v3.2.0",
+      "version": "v3.2.0"
     }
   },
   "version": 1
