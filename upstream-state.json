@@ -1,13 +1,13 @@
 {
-  "last_checked_at": "2026-06-28T04:50:40Z",
+  "last_checked_at": "2026-07-04T04:29:24Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
-      "name": "v0.13.0",
-      "published_at": "2026-06-11T18:10:12Z",
+      "name": "v0.13.1",
+      "published_at": "2026-07-03T16:30:31Z",
       "repo": "zama-ai/fhevm",
-      "url": "https://github.com/zama-ai/fhevm/releases/tag/v0.13.0",
-      "version": "v0.13.0"
+      "url": "https://github.com/zama-ai/fhevm/releases/tag/v0.13.1",
+      "version": "v0.13.1"
     },
     "fhevm-mocks": {
       "kind": "github-release",
@@ -28,10 +28,10 @@
     "forge-fhevm": {
       "branch": "main",
       "kind": "github-branch",
-      "name": "main@ff2b790db8cd",
+      "name": "main@1bbab7f06506",
       "repo": "zama-ai/forge-fhevm",
-      "url": "https://github.com/zama-ai/forge-fhevm/commit/ff2b790db8cdc34894754d670b174b2b7e27e373",
-      "version": "ff2b790db8cdc34894754d670b174b2b7e27e373"
+      "url": "https://github.com/zama-ai/forge-fhevm/commit/1bbab7f06506dca16d750cb81060d052bcce2dc5",
+      "version": "1bbab7f06506dca16d750cb81060d052bcce2dc5"
     },
     "openzeppelin-confidential-contracts": {
       "kind": "github-release",
