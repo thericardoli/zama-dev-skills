@@ -1,5 +1,5 @@
 {
-  "last_checked_at": "2026-07-04T04:29:24Z",
+  "last_checked_at": "2026-07-09T04:36:58Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
@@ -43,11 +43,11 @@
     },
     "zama-sdk": {
       "kind": "github-release",
-      "name": "v3.2.0",
-      "published_at": "2026-06-24T18:31:36Z",
+      "name": "v3.3.0",
+      "published_at": "2026-07-08T12:21:58Z",
       "repo": "zama-ai/sdk",
-      "url": "https://github.com/zama-ai/sdk/releases/tag/v3.2.0",
-      "version": "v3.2.0"
+      "url": "https://github.com/zama-ai/sdk/releases/tag/v3.3.0",
+      "version": "v3.3.0"
     }
   },
   "version": 1
