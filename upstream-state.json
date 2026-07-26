@@ -1,13 +1,13 @@
 {
-  "last_checked_at": "2026-07-20T06:26:58Z",
+  "last_checked_at": "2026-07-26T06:16:03Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
-      "name": "v0.13.1",
-      "published_at": "2026-07-03T16:30:31Z",
+      "name": "v0.13.2",
+      "published_at": "2026-07-23T10:44:19Z",
       "repo": "zama-ai/fhevm",
-      "url": "https://github.com/zama-ai/fhevm/releases/tag/v0.13.1",
-      "version": "v0.13.1"
+      "url": "https://github.com/zama-ai/fhevm/releases/tag/v0.13.2",
+      "version": "v0.13.2"
     },
     "fhevm-mocks": {
       "kind": "github-release",
@@ -19,11 +19,11 @@
     },
     "fhevm-solidity-package": {
       "kind": "npm",
-      "name": "@fhevm/solidity@0.11.1",
+      "name": "@fhevm/solidity@0.13.0",
       "package": "@fhevm/solidity",
-      "published_at": "2026-02-19T10:07:04.376Z",
+      "published_at": "2026-07-22T10:17:01.812Z",
       "url": "https://www.npmjs.com/package/%40fhevm%2Fsolidity",
-      "version": "0.11.1"
+      "version": "0.13.0"
     },
     "forge-fhevm": {
       "branch": "main",
