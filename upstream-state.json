@@ -1,5 +1,5 @@
 {
-  "last_checked_at": "2026-07-31T06:24:30Z",
+  "last_checked_at": "2026-08-06T04:24:09Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
@@ -19,27 +19,27 @@
     },
     "fhevm-solidity-package": {
       "kind": "npm",
-      "name": "@fhevm/solidity@0.13.1",
+      "name": "@fhevm/solidity@0.13.2",
       "package": "@fhevm/solidity",
-      "published_at": "2026-07-29T14:44:00.933Z",
+      "published_at": "2026-08-04T09:18:21.984Z",
       "url": "https://www.npmjs.com/package/%40fhevm%2Fsolidity",
-      "version": "0.13.1"
+      "version": "0.13.2"
     },
     "forge-fhevm": {
       "branch": "main",
       "kind": "github-branch",
-      "name": "main@1bbab7f06506",
+      "name": "main@3ee696fba62a",
       "repo": "zama-ai/forge-fhevm",
-      "url": "https://github.com/zama-ai/forge-fhevm/commit/1bbab7f06506dca16d750cb81060d052bcce2dc5",
-      "version": "1bbab7f06506dca16d750cb81060d052bcce2dc5"
+      "url": "https://github.com/zama-ai/forge-fhevm/commit/3ee696fba62a32314fde457de28cc29f1191c4cb",
+      "version": "3ee696fba62a32314fde457de28cc29f1191c4cb"
     },
     "openzeppelin-confidential-contracts": {
       "kind": "github-release",
-      "name": "v0.5.1",
-      "published_at": "2026-06-22T23:41:44Z",
+      "name": "v0.5.2",
+      "published_at": "2026-08-05T12:07:41Z",
       "repo": "OpenZeppelin/openzeppelin-confidential-contracts",
-      "url": "https://github.com/OpenZeppelin/openzeppelin-confidential-contracts/releases/tag/v0.5.1",
-      "version": "v0.5.1"
+      "url": "https://github.com/OpenZeppelin/openzeppelin-confidential-contracts/releases/tag/v0.5.2",
+      "version": "v0.5.2"
     },
     "zama-sdk": {
       "kind": "github-release",
