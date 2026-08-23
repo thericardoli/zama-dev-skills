@@ -1,5 +1,5 @@
 {
-  "last_checked_at": "2026-08-18T03:31:38Z",
+  "last_checked_at": "2026-08-23T03:35:17Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
@@ -19,11 +19,11 @@
     },
     "fhevm-solidity-package": {
       "kind": "npm",
-      "name": "@fhevm/solidity@0.13.2",
+      "name": "@fhevm/solidity@0.13.3",
       "package": "@fhevm/solidity",
-      "published_at": "2026-08-04T09:18:21.984Z",
+      "published_at": "2026-08-21T07:40:35.619Z",
       "url": "https://www.npmjs.com/package/%40fhevm%2Fsolidity",
-      "version": "0.13.2"
+      "version": "0.13.3"
     },
     "forge-fhevm": {
       "branch": "main",
