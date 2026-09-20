@@ -1,13 +1,13 @@
 {
-  "last_checked_at": "2026-09-14T03:34:42Z",
+  "last_checked_at": "2026-09-20T03:32:11Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
-      "name": "v0.13.4",
-      "published_at": "2026-09-04T14:57:47Z",
+      "name": "v0.13.6",
+      "published_at": "2026-09-18T16:02:32Z",
       "repo": "zama-ai/fhevm",
-      "url": "https://github.com/zama-ai/fhevm/releases/tag/v0.13.4",
-      "version": "v0.13.4"
+      "url": "https://github.com/zama-ai/fhevm/releases/tag/v0.13.6",
+      "version": "v0.13.6"
     },
     "fhevm-mocks": {
       "kind": "github-release",
