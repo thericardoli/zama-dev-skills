@@ -1,5 +1,5 @@
 {
-  "last_checked_at": "2026-10-23T03:34:15Z",
+  "last_checked_at": "2026-10-29T03:26:11Z",
   "sources": {
     "fhevm": {
       "kind": "github-release",
@@ -11,11 +11,11 @@
     },
     "fhevm-mocks": {
       "kind": "github-release",
-      "name": "v0.13.0",
-      "published_at": "2026-10-06T17:53:04Z",
+      "name": "v0.13.1",
+      "published_at": "2026-10-24T05:07:42Z",
       "repo": "zama-ai/fhevm-mocks",
-      "url": "https://github.com/zama-ai/fhevm-mocks/releases/tag/v0.13.0",
-      "version": "v0.13.0"
+      "url": "https://github.com/zama-ai/fhevm-mocks/releases/tag/v0.13.1",
+      "version": "v0.13.1"
     },
     "fhevm-solidity-package": {
       "kind": "npm",
